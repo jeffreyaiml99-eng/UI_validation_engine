@@ -480,6 +480,55 @@ textarea { min-height: 140px; font-family: "SF Mono", "Fira Code", monospace; fo
   box-shadow: 0 2px 8px rgba(0,0,0,.4);
 }
 
+/* ── Auth accordion ──────────────────────────────────────────────────────── */
+.auth-accordion {
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.auth-toggle {
+  width: 100%; display: flex; align-items: center; gap: 8px;
+  background: var(--surface2); border: none; cursor: pointer;
+  padding: 10px 14px; font-size: 12px; font-weight: 600;
+  color: var(--muted); text-align: left;
+  transition: background .15s, color .15s;
+}
+.auth-toggle:hover { background: #252f42; color: var(--text); }
+.auth-toggle.open  { color: var(--accent2); }
+.auth-toggle.open .chevron { transform: rotate(180deg); }
+.chevron { margin-left: auto; transition: transform .2s; flex-shrink: 0; }
+.auth-badge {
+  margin-left: 4px; padding: 1px 8px; border-radius: 10px;
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  background: var(--surface); border: 1px solid var(--border); color: var(--muted);
+}
+.auth-badge.active { background: rgba(99,102,241,.15); border-color: var(--accent); color: var(--accent2); }
+.auth-body { padding: 14px; border-top: 1px solid var(--border); background: var(--bg); }
+.auth-type-row {
+  display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap;
+}
+.auth-type-btn {
+  padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;
+  border: 1px solid var(--border); background: var(--surface2);
+  color: var(--muted); cursor: pointer;
+  display: flex; align-items: center; gap: 5px;
+  transition: all .15s;
+}
+.auth-type-btn:hover { border-color: var(--border2); color: var(--text); }
+.auth-type-btn.active { background: rgba(99,102,241,.15); border-color: var(--accent); color: var(--accent2); }
+.auth-fields { display: flex; flex-direction: column; gap: 10px; animation: fadeIn .15s; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
+.auth-field-row { display: flex; flex-direction: column; gap: 6px; }
+.auth-field-row.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.auth-hint {
+  display: flex; align-items: flex-start; gap: 7px;
+  background: rgba(99,102,241,.06); border: 1px solid rgba(99,102,241,.2);
+  border-radius: 6px; padding: 8px 10px;
+  font-size: 11px; color: var(--muted); line-height: 1.5;
+}
+.auth-hint svg { flex-shrink:0; margin-top:1px; color: var(--accent); }
+
 /* ── Samples strip ───────────────────────────────────────────────────────── */
 .samples-strip {
   background: var(--surface);
@@ -644,14 +693,22 @@ footer span { color: #475569; }
         <div class="tab-pane" id="ref-figma">
           <label class="field-label" for="ref-figma-url">Figma File / Frame URL</label>
           <input type="url" id="ref-figma-url"
-                 placeholder="https://www.figma.com/design/…"/>
-          <div class="figma-hint">
+                 placeholder="https://www.figma.com/design/FILE_KEY/…?node-id=X-Y"/>
+          <label class="field-label" for="ref-figma-token" style="margin-top:10px;">
+            Personal Access Token
+            <span style="font-weight:400;color:var(--muted);">(required for private files)</span>
+          </label>
+          <input type="text" id="ref-figma-token"
+                 placeholder="figd_xxxxxxxxxxxx…"
+                 style="font-family:'SF Mono','Fira Code',monospace;font-size:12px;letter-spacing:0.3px;"/>
+          <div class="figma-hint" style="margin-top:8px;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
               <circle cx="12" cy="12" r="10" stroke="#6366f1" stroke-width="2"/>
               <path d="M12 8v4m0 4h.01" stroke="#6366f1" stroke-width="2" stroke-linecap="round"/>
             </svg>
-            Paste a Figma share link. The playground will screenshot it via Playwright
-            (works best with publicly shared files).
+            Get a PAT from Figma → Account settings → Personal access tokens.
+            With a token the server calls the Figma Export REST API and downloads the frame as PNG.
+            Without a token Playwright attempts to screenshot the URL directly (public files only).
           </div>
         </div>
 
@@ -685,13 +742,102 @@ footer span { color: #475569; }
           <label class="field-label" for="impl-url-input">Web page URL</label>
           <input type="url" id="impl-url-input"
                  placeholder="https://your-app.com/login"/>
-          <div class="figma-hint" style="margin-top:4px;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="10" stroke="#6366f1" stroke-width="2"/>
-              <path d="M12 8v4m0 4h.01" stroke="#6366f1" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-            Enter any live URL — localhost, staging, or production. Playwright will screenshot it
-            at 1280×900.
+
+          <!-- Auth config accordion -->
+          <div class="auth-accordion">
+            <button class="auth-toggle" onclick="toggleAuth(this)" type="button">
+              <svg width="12" height="12" fill="none" viewBox="0 0 24 24">
+                <rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" stroke-width="2"/>
+                <path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              Authentication
+              <span class="auth-badge" id="auth-badge">None</span>
+              <svg class="chevron" width="12" height="12" fill="none" viewBox="0 0 24 24">
+                <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <div class="auth-body" id="auth-body" style="display:none;">
+
+              <!-- Auth type selector -->
+              <div class="auth-type-row">
+                <button class="auth-type-btn active" data-type="none"    onclick="setAuthType('none',this)">None</button>
+                <button class="auth-type-btn"         data-type="form"    onclick="setAuthType('form',this)">
+                  <svg width="11" height="11" fill="none" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="M3 10h18" stroke="currentColor" stroke-width="2"/></svg>
+                  Form Agent
+                </button>
+                <button class="auth-type-btn"         data-type="cookies" onclick="setAuthType('cookies',this)">
+                  <svg width="11" height="11" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="10" r="1" fill="currentColor"/><circle cx="14" cy="14" r="1" fill="currentColor"/></svg>
+                  Cookies
+                </button>
+                <button class="auth-type-btn"         data-type="basic"   onclick="setAuthType('basic',this)">
+                  <svg width="11" height="11" fill="none" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                  Basic
+                </button>
+              </div>
+
+              <!-- Form auth fields -->
+              <div class="auth-fields" id="auth-fields-form" style="display:none;">
+                <div class="auth-field-row">
+                  <div>
+                    <label class="field-label">Login URL <span style="font-weight:400;color:var(--muted)">(if different)</span></label>
+                    <input type="url" id="auth-login-url" placeholder="https://app.com/login (leave blank = same URL)"/>
+                  </div>
+                </div>
+                <div class="auth-field-row two-col">
+                  <div>
+                    <label class="field-label">Username / Email</label>
+                    <input type="text" id="auth-form-user" placeholder="user@company.com" autocomplete="off"/>
+                  </div>
+                  <div>
+                    <label class="field-label">Password</label>
+                    <input type="password" id="auth-form-pass" placeholder="••••••••" autocomplete="off"/>
+                  </div>
+                </div>
+                <div>
+                  <label class="field-label">Target URL after login <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+                  <input type="url" id="auth-target-url" placeholder="https://app.com/dashboard"/>
+                </div>
+                <div class="auth-hint">
+                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  The VLM agent will screenshot the login page, identify the form fields, fill credentials, and submit.
+                </div>
+              </div>
+
+              <!-- Cookie fields -->
+              <div class="auth-fields" id="auth-fields-cookies" style="display:none;">
+                <label class="field-label">Cookie string</label>
+                <textarea id="auth-cookies" rows="3"
+                          placeholder="session=abc123; user_id=42; csrf_token=xyz"
+                          style="font-family:'SF Mono','Fira Code',monospace;font-size:12px;"></textarea>
+                <div>
+                  <label class="field-label" style="margin-top:8px;">Target URL <span style="font-weight:400;color:var(--muted)">(page to visit after injecting cookies)</span></label>
+                  <input type="url" id="auth-cookie-target" placeholder="https://app.com/dashboard"/>
+                </div>
+                <div class="auth-hint">
+                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  Cookies are injected into the browser context before navigating. Copy from DevTools → Application → Cookies.
+                </div>
+              </div>
+
+              <!-- Basic auth fields -->
+              <div class="auth-fields" id="auth-fields-basic" style="display:none;">
+                <div class="auth-field-row two-col">
+                  <div>
+                    <label class="field-label">Username</label>
+                    <input type="text" id="auth-basic-user" placeholder="admin" autocomplete="off"/>
+                  </div>
+                  <div>
+                    <label class="field-label">Password</label>
+                    <input type="password" id="auth-basic-pass" placeholder="••••••••" autocomplete="off"/>
+                  </div>
+                </div>
+                <div class="auth-hint">
+                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  HTTP Basic Auth — sent as Authorization: Basic header on every request.
+                </div>
+              </div>
+
+            </div>
           </div>
         </div>
 
@@ -849,6 +995,29 @@ footer span { color: #475569; }
 </footer>
 
 <script>
+// ── Auth accordion ───────────────────────────────────────────────────────
+let currentAuthType = "none";
+
+function toggleAuth(btn) {
+  const body = document.getElementById("auth-body");
+  const open = body.style.display === "none";
+  body.style.display = open ? "block" : "none";
+  btn.classList.toggle("open", open);
+}
+
+function setAuthType(type, btn) {
+  currentAuthType = type;
+  document.querySelectorAll(".auth-type-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  ["form","cookies","basic"].forEach(t => {
+    document.getElementById(`auth-fields-${t}`).style.display = t === type ? "flex" : "none";
+  });
+  const badge = document.getElementById("auth-badge");
+  const labels = {none:"None", form:"Form Agent", cookies:"Cookies", basic:"Basic"};
+  badge.textContent = labels[type] || type;
+  badge.className   = "auth-badge" + (type !== "none" ? " active" : "");
+}
+
 // ── Tab switching ─────────────────────────────────────────────────────────
 document.querySelectorAll(".tab").forEach(tab => {
   tab.addEventListener("click", () => {
@@ -943,7 +1112,9 @@ async function runEval() {
     const v = document.getElementById("ref-figma-url").value.trim();
     if (!v) { showError("Please enter a Figma URL."); return; }
     fd.append("ref_url", v);
-    fd.set("ref_type", "url");
+    fd.set("ref_type", "figma");
+    const tok = document.getElementById("ref-figma-token").value.trim();
+    if (tok) fd.append("ref_figma_token", tok);
   } else {
     const v = document.getElementById("ref-html-input").value.trim();
     if (!v) { showError("Please paste reference HTML."); return; }
@@ -955,6 +1126,22 @@ async function runEval() {
     const v = document.getElementById("impl-url-input").value.trim();
     if (!v) { showError("Please enter an implementation URL."); return; }
     fd.append("impl_url", v);
+    // Auth config
+    fd.append("impl_auth_type", currentAuthType);
+    if (currentAuthType === "form") {
+      fd.append("impl_auth_user",   document.getElementById("auth-form-user").value.trim());
+      fd.append("impl_auth_pass",   document.getElementById("auth-form-pass").value);
+      const loginUrl  = document.getElementById("auth-login-url").value.trim();
+      const targetUrl = document.getElementById("auth-target-url").value.trim();
+      if (loginUrl)  { fd.set("impl_url", loginUrl); fd.append("impl_auth_target", targetUrl || v); }
+      else           { fd.append("impl_auth_target", targetUrl); }
+    } else if (currentAuthType === "cookies") {
+      fd.append("impl_auth_cookies", document.getElementById("auth-cookies").value.trim());
+      fd.append("impl_auth_target",  document.getElementById("auth-cookie-target").value.trim() || v);
+    } else if (currentAuthType === "basic") {
+      fd.append("impl_auth_user", document.getElementById("auth-basic-user").value.trim());
+      fd.append("impl_auth_pass", document.getElementById("auth-basic-pass").value);
+    }
   } else {
     const v = document.getElementById("impl-html-input").value.trim();
     if (!v) { showError("Please paste implementation HTML."); return; }
@@ -1054,8 +1241,9 @@ function showResults(data) {
   badge.style.color       = g.color;
   badge.style.border      = `1px solid ${g.color}55`;
 
-  document.getElementById("score-sub").textContent =
-    data.vlm?.summary || "";
+  const authNote = data.auth_type && data.auth_type !== "none"
+    ? ` (rendered via ${data.auth_type} auth agent)`  : "";
+  document.getElementById("score-sub").textContent = (data.vlm?.summary || "") + authNote;
 
   // Metric cards
   document.getElementById("mc-ssim").textContent  = data.pixel.ssim;

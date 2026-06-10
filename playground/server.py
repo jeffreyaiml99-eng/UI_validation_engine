@@ -1,97 +1,248 @@
 #!/usr/bin/env python3
 """
-Design-to-Code Fidelity Playground — Backend
-=============================================
-FastAPI server exposing:
-  GET  /                   → serves playground UI
-  POST /api/evaluate       → accepts reference + implementation, returns job_id
-  GET  /api/stream/{id}    → SSE stream of real-time progress + results
-  GET  /api/screenshots/*  → serves generated PNGs
+Design-to-Code Fidelity Playground — Backend (Auth-Aware v2)
+=============================================================
+New in v2:
+  • Figma REST API screenshots  (PAT token  → export PNG via API)
+  • Web form auth agent         (VLM detects login form → Playwright fills it)
+  • Cookie / Basic-auth support (inject session cookies or HTTP credentials)
+  • Demo protected app          (/demo/login  /demo/dashboard) for testing
+
+Endpoints:
+  GET  /                       → playground UI
+  POST /api/evaluate           → submit job, returns job_id
+  GET  /api/stream/{id}        → SSE real-time progress
+  GET  /api/samples            → sample library list
+  GET  /api/samples/{id}/{v}   → fetch sample HTML
+  GET  /demo/login             → demo protected app – login page
+  POST /demo/auth              → demo protected app – validates creds + sets cookie
+  GET  /demo/dashboard         → demo protected app – requires auth
+  GET  /screenshots/*          → serve generated PNGs
 """
 
 import asyncio
 import base64
+import io
 import json
 import os
 import re
 import tempfile
 import time
 import urllib.request
+import urllib.parse
 import uuid
 from pathlib import Path
 from typing import Optional
 
 import numpy as np
-from fastapi import FastAPI, File, Form, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
+from fastapi import FastAPI, File, Form, UploadFile, Request, Response
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from PIL import Image
 from skimage.metrics import structural_similarity as ssim
 
-# ── Config ───────────────────────────────────────────────────────────────────
-BASE_DIR = Path(__file__).parent
-SS_DIR   = BASE_DIR / "screenshots"
+# ── Config ────────────────────────────────────────────────────────────────────
+BASE_DIR    = Path(__file__).parent
+SS_DIR      = BASE_DIR / "screenshots"
+SAMPLES_DIR = BASE_DIR / "samples"
 SS_DIR.mkdir(exist_ok=True)
 
 API_BASE  = os.environ.get("API_BASE", "http://10.69.141.113:8023")
 VLM_MODEL = "gpt-4o"
 VIEWPORT  = {"width": 1280, "height": 900}
 
-# In-memory job store  {job_id: asyncio.Queue}
+# Demo app credentials (for auth testing)
+DEMO_USER = "demo"
+DEMO_PASS = "demo123"
+DEMO_COOKIE_NAME = "playground_session"
+DEMO_COOKIE_VALUE = "authenticated"
+
 _queues: dict[str, asyncio.Queue] = {}
 
-SAMPLES_DIR = BASE_DIR / "samples"
+app = FastAPI(title="Design Fidelity Playground v2")
 
-app = FastAPI(title="Design Fidelity Playground")
+app.mount("/static",      StaticFiles(directory=str(BASE_DIR / "static")),  name="static")
+app.mount("/screenshots", StaticFiles(directory=str(SS_DIR)),               name="screenshots")
 
-# ── Static files ─────────────────────────────────────────────────────────────
-app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
-app.mount("/screenshots", StaticFiles(directory=str(SS_DIR)), name="screenshots")
 
+# ══════════════════════════════════════════════════════════════════════════════
+# DEMO PROTECTED APP  (for testing the auth agent)
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.get("/demo/login", response_class=HTMLResponse)
+async def demo_login_page(error: str = ""):
+    err_html = f'<div class="error">{error}</div>' if error else ""
+    return HTMLResponse(f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Demo App — Sign in</title>
+<style>
+*,*::before,*::after{{box-sizing:border-box;margin:0;padding:0}}
+body{{min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}}
+.card{{width:400px;background:#fff;border-radius:14px;padding:40px;
+  box-shadow:0 20px 60px rgba(0,0,0,.35);}}
+.brand{{display:flex;align-items:center;gap:10px;margin-bottom:28px;}}
+.brand-icon{{width:36px;height:36px;background:linear-gradient(135deg,#4f46e5,#7c3aed);
+  border-radius:9px;display:flex;align-items:center;justify-content:center;}}
+.brand-name{{font-size:18px;font-weight:700;color:#111827;}}
+h1{{font-size:22px;font-weight:700;color:#111827;margin-bottom:4px;}}
+.sub{{font-size:13px;color:#6b7280;margin-bottom:28px;}}
+.error{{background:#fef2f2;border:1px solid #fecaca;color:#dc2626;
+  padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;}}
+.field{{margin-bottom:18px;}}
+label{{display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px;}}
+input[type=text],input[type=password]{{width:100%;height:42px;padding:0 12px;
+  border:1.5px solid #e5e7eb;border-radius:8px;font-size:14px;color:#111827;outline:none;}}
+input:focus{{border-color:#4f46e5;box-shadow:0 0 0 3px rgba(79,70,229,.1);}}
+.hint{{font-size:11px;color:#9ca3af;margin-top:18px;text-align:center;}}
+.btn{{width:100%;height:44px;background:linear-gradient(135deg,#4f46e5,#7c3aed);
+  color:#fff;font-size:14px;font-weight:700;border:none;border-radius:8px;cursor:pointer;}}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="brand">
+    <div class="brand-icon">
+      <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
+              stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <span class="brand-name">Synapse Demo</span>
+  </div>
+  <h1>Sign in</h1>
+  <p class="sub">Access the protected dashboard</p>
+  {err_html}
+  <form method="POST" action="/demo/auth">
+    <div class="field">
+      <label for="username">Username</label>
+      <input type="text" id="username" name="username" placeholder="demo" autocomplete="username"/>
+    </div>
+    <div class="field">
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" placeholder="demo123" autocomplete="current-password"/>
+    </div>
+    <button type="submit" class="btn">Sign in</button>
+  </form>
+  <p class="hint">Use <strong>demo / demo123</strong> to sign in</p>
+</div>
+</body>
+</html>""")
+
+
+@app.post("/demo/auth")
+async def demo_auth(request: Request):
+    form = await request.form()
+    username = form.get("username", "")
+    password = form.get("password", "")
+    if username == DEMO_USER and password == DEMO_PASS:
+        response = RedirectResponse("/demo/dashboard", status_code=302)
+        response.set_cookie(DEMO_COOKIE_NAME, DEMO_COOKIE_VALUE,
+                            httponly=True, samesite="lax")
+        return response
+    return RedirectResponse("/demo/login?error=Invalid+credentials", status_code=302)
+
+
+@app.get("/demo/dashboard", response_class=HTMLResponse)
+async def demo_dashboard(request: Request):
+    if request.cookies.get(DEMO_COOKIE_NAME) != DEMO_COOKIE_VALUE:
+        return RedirectResponse("/demo/login", status_code=302)
+    return HTMLResponse("""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Demo Dashboard — Protected</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f172a;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  color:#e2e8f0;min-height:100vh;}
+header{background:#1e293b;border-bottom:1px solid #334155;padding:16px 32px;
+  display:flex;align-items:center;justify-content:space-between;}
+.brand{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:700;}
+.brand-icon{width:30px;height:30px;background:linear-gradient(135deg,#4f46e5,#7c3aed);
+  border-radius:8px;display:flex;align-items:center;justify-content:center;}
+.badge{background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);
+  color:#4ade80;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;}
+.main{padding:32px;}
+h1{font-size:24px;font-weight:800;color:#f1f5f9;margin-bottom:8px;}
+.sub{font-size:14px;color:#64748b;margin-bottom:32px;}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px;}
+.stat{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:20px;}
+.stat-val{font-size:32px;font-weight:800;color:#f1f5f9;margin-bottom:4px;}
+.stat-lbl{font-size:12px;color:#64748b;}
+.stat-trend{font-size:11px;color:#4ade80;margin-top:4px;}
+.section{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:24px;}
+.section-title{font-size:14px;font-weight:700;color:#94a3b8;
+  text-transform:uppercase;letter-spacing:.8px;margin-bottom:16px;}
+.row{display:flex;align-items:center;padding:10px 0;
+  border-bottom:1px solid #1e293b;gap:12px;font-size:14px;}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="brand-icon">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
+              stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    Synapse Dashboard
+  </div>
+  <span class="badge">Authenticated ✓</span>
+</header>
+<div class="main">
+  <h1>Welcome back, Demo User</h1>
+  <p class="sub">This is a protected page — only visible after authentication.</p>
+  <div class="stats">
+    <div class="stat"><div class="stat-val">2,847</div><div class="stat-lbl">Total evaluations</div><div class="stat-trend">↑ 12% this week</div></div>
+    <div class="stat"><div class="stat-val">91.4</div><div class="stat-lbl">Avg fidelity score</div><div class="stat-trend">↑ 3.2 pts</div></div>
+    <div class="stat"><div class="stat-val">38</div><div class="stat-lbl">Components tracked</div><div class="stat-trend">↑ 4 new</div></div>
+    <div class="stat"><div class="stat-val">99.8%</div><div class="stat-lbl">Uptime</div><div class="stat-trend">Last 30 days</div></div>
+  </div>
+  <div class="section">
+    <div class="section-title">Recent evaluations</div>
+    <div class="row"><div class="dot" style="background:#22c55e"></div><span>Login Page v3.2</span><span style="margin-left:auto;color:#4ade80">94/100</span></div>
+    <div class="row"><div class="dot" style="background:#22c55e"></div><span>Pricing Cards v1.8</span><span style="margin-left:auto;color:#4ade80">89/100</span></div>
+    <div class="row"><div class="dot" style="background:#f59e0b"></div><span>Checkout Flow v2.1</span><span style="margin-left:auto;color:#f59e0b">72/100</span></div>
+    <div class="row"><div class="dot" style="background:#ef4444"></div><span>Settings Page v0.9</span><span style="margin-left:auto;color:#ef4444">41/100</span></div>
+  </div>
+</div>
+</body>
+</html>""")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# MAIN PAGE
+# ══════════════════════════════════════════════════════════════════════════════
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
-    index = BASE_DIR / "static" / "index.html"
-    return HTMLResponse(index.read_text())
+    return HTMLResponse((BASE_DIR / "static" / "index.html").read_text())
 
 
-# ── Sample library endpoints ──────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# SAMPLE LIBRARY
+# ══════════════════════════════════════════════════════════════════════════════
+
 SAMPLE_META = {
-    "login": {
-        "title":       "Login Page",
-        "description": "Indigo gradient card with social login",
-        "icon":        "🔐",
-        "variants":    {"reference": "reference.html", "close": "v1_close.html", "degraded": "v2_degraded.html"},
-        "dir":         "login",
-    },
-    "pricing": {
-        "title":       "Pricing Cards",
-        "description": "3-tier dark glassmorphism pricing",
-        "icon":        "💳",
-        "variants":    {"reference": "reference.html", "close": "v1_close.html", "degraded": "v2_degraded.html"},
-        "dir":         "pricing",
-    },
-    "signup": {
-        "title":       "Sign-Up Form",
-        "description": "Split hero + multi-field registration",
-        "icon":        "📝",
-        "variants":    {"reference": "reference.html", "close": "v1_close.html", "degraded": "v2_degraded.html"},
-        "dir":         "signup",
-    },
+    "login":   {"title": "Login Page",      "description": "Indigo gradient card with social login",   "icon": "🔐", "dir": "login",   "variants": {"reference": "reference.html", "close": "v1_close.html", "degraded": "v2_degraded.html"}},
+    "pricing": {"title": "Pricing Cards",   "description": "3-tier dark glassmorphism pricing",         "icon": "💳", "dir": "pricing", "variants": {"reference": "reference.html", "close": "v1_close.html", "degraded": "v2_degraded.html"}},
+    "signup":  {"title": "Sign-Up Form",    "description": "Split hero + multi-field registration",     "icon": "📝", "dir": "signup",  "variants": {"reference": "reference.html", "close": "v1_close.html", "degraded": "v2_degraded.html"}},
 }
 
-# Symlink login sample from POC directory if not already in samples/
 _login_src = BASE_DIR.parent / "poc"
 _login_dst = SAMPLES_DIR / "login"
 if not _login_dst.exists() and _login_src.exists():
     import shutil
     _login_dst.mkdir(parents=True, exist_ok=True)
-    for name, fname in [("reference.html", "reference.html"),
-                         ("v1_close.html",  "v1_close.html"),
-                         ("v2_degraded.html","v2_degraded.html")]:
-        src = _login_src / ("design" if name == "reference.html" else "implementations") / fname
-        if src.exists():
-            shutil.copy(src, _login_dst / name)
+    for name, fname in [("reference.html","reference.html"),("v1_close.html","v1_close.html"),("v2_degraded.html","v2_degraded.html")]:
+        src = _login_src / ("design" if name=="reference.html" else "implementations") / fname
+        if src.exists(): shutil.copy(src, _login_dst / name)
 
 
 @app.get("/api/samples")
@@ -101,48 +252,67 @@ async def list_samples():
 
 @app.get("/api/samples/{sample_id}/{variant}")
 async def get_sample(sample_id: str, variant: str):
+    from fastapi import HTTPException
     meta = SAMPLE_META.get(sample_id)
     if not meta or variant not in meta["variants"]:
-        from fastapi import HTTPException
         raise HTTPException(404, "Sample not found")
     path = SAMPLES_DIR / meta["dir"] / meta["variants"][variant]
     if not path.exists():
-        from fastapi import HTTPException
         raise HTTPException(404, f"File not found: {path}")
     return {"html": path.read_text(), "name": f"{meta['title']} — {variant}"}
 
 
-# ── Evaluate endpoint ─────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# EVALUATE ENDPOINT  (auth-aware v2)
+# ══════════════════════════════════════════════════════════════════════════════
+
 @app.post("/api/evaluate")
 async def evaluate(
-    ref_type:  str           = Form(...),   # "upload" | "html" | "url"
-    impl_type: str           = Form(...),   # "url"    | "html"
-    ref_image: Optional[UploadFile] = File(None),
-    ref_html:  Optional[str] = Form(None),
-    ref_url:   Optional[str] = Form(None),
-    impl_url:  Optional[str] = Form(None),
-    impl_html: Optional[str] = Form(None),
+    # ── Reference inputs ──────────────────────────────────────────────────────
+    ref_type:         str                    = Form(...),  # "upload"|"html"|"url"|"figma"
+    ref_image:        Optional[UploadFile]   = File(None),
+    ref_html:         Optional[str]          = Form(None),
+    ref_url:          Optional[str]          = Form(None),
+    ref_figma_token:  Optional[str]          = Form(None),  # Figma PAT
+    # ── Implementation inputs ─────────────────────────────────────────────────
+    impl_type:        str                    = Form(...),  # "url"|"html"
+    impl_url:         Optional[str]          = Form(None),
+    impl_html:        Optional[str]          = Form(None),
+    # ── Auth config for implementation URL ───────────────────────────────────
+    impl_auth_type:   Optional[str]          = Form(None),  # "none"|"form"|"cookies"|"basic"
+    impl_auth_user:   Optional[str]          = Form(None),
+    impl_auth_pass:   Optional[str]          = Form(None),
+    impl_auth_cookies:Optional[str]          = Form(None),  # "name=val; name2=val2"
+    impl_auth_target: Optional[str]          = Form(None),  # URL to reach after auth
 ):
     job_id = str(uuid.uuid4())
     q: asyncio.Queue = asyncio.Queue()
     _queues[job_id] = q
 
-    # Save uploaded image if provided
     ref_image_bytes: Optional[bytes] = None
     if ref_image:
         ref_image_bytes = await ref_image.read()
 
-    asyncio.create_task(
-        _run_evaluation(
-            job_id, q,
-            ref_type, ref_image_bytes, ref_html, ref_url,
-            impl_type, impl_url, impl_html,
-        )
-    )
+    auth_cfg = {
+        "type":    impl_auth_type or "none",
+        "user":    impl_auth_user or "",
+        "pass":    impl_auth_pass or "",
+        "cookies": impl_auth_cookies or "",
+        "target":  impl_auth_target or "",
+    }
+
+    asyncio.create_task(_run_evaluation(
+        job_id, q,
+        ref_type, ref_image_bytes, ref_html, ref_url, ref_figma_token,
+        impl_type, impl_url, impl_html, auth_cfg,
+    ))
     return {"job_id": job_id}
 
 
-# ── SSE stream endpoint ───────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# SSE STREAM
+# ══════════════════════════════════════════════════════════════════════════════
+
 @app.get("/api/stream/{job_id}")
 async def stream(job_id: str):
     q = _queues.get(job_id)
@@ -158,72 +328,81 @@ async def stream(job_id: str):
                 break
 
     return StreamingResponse(event_gen(), media_type="text/event-stream",
-                             headers={"Cache-Control": "no-cache",
-                                      "X-Accel-Buffering": "no"})
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
-# ── Core evaluation logic (runs in background task) ───────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# CORE EVALUATION PIPELINE
+# ══════════════════════════════════════════════════════════════════════════════
+
 async def _run_evaluation(
-    job_id:          str,
-    q:               asyncio.Queue,
-    ref_type:        str,
-    ref_image_bytes: Optional[bytes],
-    ref_html:        Optional[str],
-    ref_url:         Optional[str],
-    impl_type:       str,
-    impl_url:        Optional[str],
-    impl_html:       Optional[str],
+    job_id, q,
+    ref_type, ref_image_bytes, ref_html, ref_url, ref_figma_token,
+    impl_type, impl_url, impl_html, auth_cfg,
 ):
-    async def emit(step: str, pct: int, msg: str, data: dict = None):
+    async def emit(step, pct, msg, data=None):
         payload = {"type": "progress", "step": step, "pct": pct, "msg": msg}
-        if data:
-            payload.update(data)
+        if data: payload.update(data)
         await q.put(payload)
 
     try:
-        # ── Step 1: Prepare reference ────────────────────────────────────────
-        await emit("reference", 5, "Preparing reference design …")
-        ref_ss = SS_DIR / f"{job_id}_ref.png"
-
         loop = asyncio.get_event_loop()
+        ref_ss  = SS_DIR / f"{job_id}_ref.png"
+        impl_ss = SS_DIR / f"{job_id}_impl.png"
+
+        # ── Step 1: Reference ─────────────────────────────────────────────────
+        await emit("reference", 5, "Preparing reference design …")
 
         if ref_type == "upload" and ref_image_bytes:
-            # Save uploaded image directly as reference screenshot
-            img = Image.open(__import__("io").BytesIO(ref_image_bytes)).convert("RGB")
-            # Crop/resize to viewport width if too large; keep proportional
+            img = Image.open(io.BytesIO(ref_image_bytes)).convert("RGB")
             if img.width > VIEWPORT["width"]:
-                ratio = VIEWPORT["width"] / img.width
-                img = img.resize((VIEWPORT["width"], int(img.height * ratio)), Image.LANCZOS)
+                r = VIEWPORT["width"] / img.width
+                img = img.resize((VIEWPORT["width"], int(img.height * r)), Image.LANCZOS)
             img.save(str(ref_ss), "PNG")
+
+        elif ref_type in ("figma", "url") and ref_url:
+            if ref_type == "figma" and ref_figma_token:
+                await emit("reference", 10, "Fetching Figma frame via REST API …")
+                await loop.run_in_executor(None, _screenshot_figma, ref_url, ref_figma_token, ref_ss)
+            elif ref_type == "figma" and not ref_figma_token:
+                # Fall back to Playwright screenshot (works for publicly shared Figma)
+                await emit("reference", 10, "Screenshotting Figma URL (no token, may be partial) …")
+                await loop.run_in_executor(None, _screenshot_url, ref_url, ref_ss)
+            else:
+                await loop.run_in_executor(None, _screenshot_url, ref_url, ref_ss)
+
         elif ref_type == "html" and ref_html:
             with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
-                f.write(ref_html)
-                tmp_path = Path(f.name)
-            await loop.run_in_executor(None, _screenshot_file, tmp_path, ref_ss)
-            tmp_path.unlink(missing_ok=True)
-        elif ref_type == "url" and ref_url:
-            await loop.run_in_executor(None, _screenshot_url, ref_url, ref_ss)
+                f.write(ref_html); tmp = Path(f.name)
+            await loop.run_in_executor(None, _screenshot_file, tmp, ref_ss)
+            tmp.unlink(missing_ok=True)
         else:
-            await q.put({"type": "error", "msg": "Invalid reference input"})
-            return
+            await q.put({"type": "error", "msg": "Invalid reference input"}); return
 
         await emit("reference", 20, "Reference captured ✓", {"ref_img": _img_url(ref_ss)})
 
-        # ── Step 2: Prepare implementation ───────────────────────────────────
-        await emit("impl", 25, "Rendering implementation …")
-        impl_ss = SS_DIR / f"{job_id}_impl.png"
+        # ── Step 2: Implementation ────────────────────────────────────────────
+        auth_label = f" [{auth_cfg['type']} auth]" if auth_cfg["type"] != "none" else ""
+        await emit("impl", 25, f"Rendering implementation{auth_label} …")
 
         if impl_type == "url" and impl_url:
-            await loop.run_in_executor(None, _screenshot_url, impl_url, impl_ss)
+            if auth_cfg["type"] == "none":
+                await loop.run_in_executor(None, _screenshot_url, impl_url, impl_ss)
+            else:
+                await emit("impl", 30, f"Auth agent starting ({auth_cfg['type']}) …")
+                result = await loop.run_in_executor(
+                    None, _screenshot_with_auth, impl_url, impl_ss, auth_cfg
+                )
+                if result.get("agent_log"):
+                    await emit("impl", 38, result["agent_log"])
+
         elif impl_type == "html" and impl_html:
             with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
-                f.write(impl_html)
-                tmp_path = Path(f.name)
-            await loop.run_in_executor(None, _screenshot_file, tmp_path, impl_ss)
-            tmp_path.unlink(missing_ok=True)
+                f.write(impl_html); tmp = Path(f.name)
+            await loop.run_in_executor(None, _screenshot_file, tmp, impl_ss)
+            tmp.unlink(missing_ok=True)
         else:
-            await q.put({"type": "error", "msg": "Invalid implementation input"})
-            return
+            await q.put({"type": "error", "msg": "Invalid implementation input"}); return
 
         await emit("impl", 45, "Implementation rendered ✓", {"impl_img": _img_url(impl_ss)})
 
@@ -237,25 +416,14 @@ async def _run_evaluation(
         vlm = await loop.run_in_executor(None, _vlm_judge, ref_ss, impl_ss)
         await emit("vlm", 88, "VLM scoring done ✓", {"vlm": vlm})
 
-        # ── Step 5: Composite score ───────────────────────────────────────────
+        # ── Step 5: Composite ─────────────────────────────────────────────────
         await emit("composite", 95, "Computing composite score …")
-        total_vlm = vlm.get("total", 0)
-        composite = round(
-            0.40 * total_vlm
-            + 0.35 * px["ssim"] * 100
-            + 0.25 * px["pixel_match_20"],
-            1,
-        )
-        grade = _grade(composite)
-
+        composite = round(0.40 * vlm.get("total",0) + 0.35 * px["ssim"]*100 + 0.25 * px["pixel_match_20"], 1)
         await q.put({
-            "type":      "done",
-            "composite": composite,
-            "grade":     grade,
-            "pixel":     px,
-            "vlm":       vlm,
-            "ref_img":   _img_url(ref_ss),
-            "impl_img":  _img_url(impl_ss),
+            "type": "done", "composite": composite, "grade": _grade(composite),
+            "pixel": px, "vlm": vlm,
+            "ref_img": _img_url(ref_ss), "impl_img": _img_url(impl_ss),
+            "auth_type": auth_cfg["type"],
         })
 
     except Exception as exc:
@@ -263,33 +431,262 @@ async def _run_evaluation(
         await q.put({"type": "error", "msg": str(exc), "trace": traceback.format_exc()})
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# SCREENSHOT HELPERS
+# ══════════════════════════════════════════════════════════════════════════════
+
 def _img_url(path: Path) -> str:
     return f"/screenshots/{path.name}"
 
 
 def _screenshot_url(url: str, out: Path):
+    """Plain screenshot — no auth."""
     from playwright.sync_api import sync_playwright
     with sync_playwright() as p:
-        browser = p.chromium.launch()
-        page    = browser.new_page(viewport=VIEWPORT)
-        page.goto(url, wait_until="networkidle", timeout=30000)
-        page.wait_for_timeout(500)
-        page.screenshot(path=str(out), full_page=False)
-        browser.close()
+        b = p.chromium.launch()
+        pg = b.new_page(viewport=VIEWPORT)
+        pg.goto(url, wait_until="networkidle", timeout=30000)
+        pg.wait_for_timeout(500)
+        pg.screenshot(path=str(out), full_page=False)
+        b.close()
 
 
 def _screenshot_file(html_path: Path, out: Path):
     from playwright.sync_api import sync_playwright
     url = f"file://{html_path.resolve()}"
     with sync_playwright() as p:
-        browser = p.chromium.launch()
-        page    = browser.new_page(viewport=VIEWPORT)
-        page.goto(url, wait_until="networkidle")
-        page.wait_for_timeout(300)
-        page.screenshot(path=str(out), full_page=False)
-        browser.close()
+        b = p.chromium.launch()
+        pg = b.new_page(viewport=VIEWPORT)
+        pg.goto(url, wait_until="networkidle")
+        pg.wait_for_timeout(300)
+        pg.screenshot(path=str(out), full_page=False)
+        b.close()
 
+
+# ── Figma REST API screenshot ─────────────────────────────────────────────────
+def _screenshot_figma(figma_url: str, token: str, out: Path):
+    """
+    Uses Figma Export API to download a frame as PNG.
+    URL formats supported:
+      https://www.figma.com/design/FILE_KEY/...?node-id=X-Y
+      https://www.figma.com/file/FILE_KEY/...?node-id=X%3AY
+    Falls back to Playwright screenshot if node-id cannot be parsed.
+    """
+    # Parse file key and node id from Figma URL
+    m = re.search(r"figma\.com/(?:file|design|proto)/([A-Za-z0-9]+)", figma_url)
+    if not m:
+        raise ValueError(f"Cannot extract Figma file key from URL: {figma_url}")
+    file_key = m.group(1)
+
+    parsed    = urllib.parse.urlparse(figma_url)
+    params    = urllib.parse.parse_qs(parsed.query)
+    node_id   = (params.get("node-id") or params.get("node_id") or [""])[0]
+    node_id   = node_id.replace("%3A", ":").replace("-", ":")  # normalise
+
+    if not node_id:
+        # No node-id → export first page thumbnail via /v1/files endpoint
+        api_url = f"https://api.figma.com/v1/files/{file_key}/images"
+    else:
+        ids_param = urllib.parse.quote(node_id)
+        api_url   = f"https://api.figma.com/v1/images/{file_key}?ids={ids_param}&format=png&scale=2"
+
+    req = urllib.request.Request(api_url, headers={"X-Figma-Token": token})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        data = json.loads(r.read())
+
+    # Get the PNG download URL from the response
+    img_url = None
+    if "images" in data:
+        images = data["images"]
+        img_url = next(iter(images.values()), None) if images else None
+    elif "meta" in data and "images" in data["meta"]:
+        img_url = next(iter(data["meta"]["images"].values()), None)
+
+    if not img_url:
+        raise ValueError(f"Figma API did not return an image URL. Response: {data}")
+
+    with urllib.request.urlopen(img_url, timeout=30) as r:
+        img_bytes = r.read()
+
+    img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+    if img.width > VIEWPORT["width"]:
+        ratio = VIEWPORT["width"] / img.width
+        img = img.resize((VIEWPORT["width"], int(img.height * ratio)), Image.LANCZOS)
+    img.save(str(out), "PNG")
+
+
+# ── Auth-aware screenshot (form / cookies / basic) ────────────────────────────
+def _screenshot_with_auth(url: str, out: Path, auth_cfg: dict) -> dict:
+    """
+    Returns {"agent_log": str} with a description of what the agent did.
+    """
+    from playwright.sync_api import sync_playwright
+
+    auth_type = auth_cfg["type"]
+    user      = auth_cfg["user"]
+    password  = auth_cfg["pass"]
+    cookies   = auth_cfg["cookies"]
+    target    = auth_cfg["target"] or url
+
+    with sync_playwright() as p:
+
+        # ── Cookie injection ──────────────────────────────────────────────────
+        if auth_type == "cookies":
+            browser = p.chromium.launch()
+            ctx     = browser.new_context(viewport=VIEWPORT)
+            parsed  = urllib.parse.urlparse(url)
+            base_url = f"{parsed.scheme}://{parsed.netloc}"
+            cookie_list = []
+            for part in cookies.split(";"):
+                part = part.strip()
+                if "=" in part:
+                    k, _, v = part.partition("=")
+                    cookie_list.append({"name": k.strip(), "value": v.strip(), "url": base_url})
+            if cookie_list:
+                ctx.add_cookies(cookie_list)
+            pg = ctx.new_page()
+            pg.goto(target, wait_until="networkidle", timeout=30000)
+            pg.wait_for_timeout(500)
+            pg.screenshot(path=str(out), full_page=False)
+            browser.close()
+            return {"agent_log": f"Cookie auth: injected {len(cookie_list)} cookie(s) → navigated to {target}"}
+
+        # ── HTTP Basic auth ───────────────────────────────────────────────────
+        elif auth_type == "basic":
+            browser = p.chromium.launch()
+            ctx     = browser.new_context(viewport=VIEWPORT,
+                                          http_credentials={"username": user, "password": password})
+            pg      = ctx.new_page()
+            pg.goto(target, wait_until="networkidle", timeout=30000)
+            pg.wait_for_timeout(500)
+            pg.screenshot(path=str(out), full_page=False)
+            browser.close()
+            return {"agent_log": f"Basic auth: {user}:*** → {target}"}
+
+        # ── Form auth (VLM agent) ─────────────────────────────────────────────
+        elif auth_type == "form":
+            browser = p.chromium.launch()
+            ctx     = browser.new_context(viewport=VIEWPORT)
+            pg      = ctx.new_page()
+
+            # Navigate to the login URL
+            pg.goto(url, wait_until="networkidle", timeout=30000)
+            pg.wait_for_timeout(400)
+
+            # Take screenshot and ask VLM to identify the login form
+            ss_bytes = pg.screenshot()
+            ss_b64   = base64.b64encode(ss_bytes).decode()
+            form_info = _vlm_detect_login_form(ss_b64)
+
+            agent_log = f"VLM detected: {form_info.get('detection', 'unknown')}"
+
+            if form_info.get("is_login_page"):
+                u_sel = form_info.get("username_selector", "")
+                p_sel = form_info.get("password_selector", "")
+                s_sel = form_info.get("submit_selector", "")
+
+                # Fill username
+                if u_sel:
+                    try:
+                        pg.fill(u_sel, user, timeout=3000)
+                        agent_log += f" | filled username via '{u_sel}'"
+                    except Exception:
+                        # Fallback selectors
+                        for fb in ["input[type='email']", "input[name='username']", "input[name='email']", "input[id='username']"]:
+                            try: pg.fill(fb, user, timeout=1000); agent_log += f" | username fallback '{fb}'"; break
+                            except Exception: pass
+
+                # Fill password
+                if p_sel:
+                    try:
+                        pg.fill(p_sel, password, timeout=3000)
+                        agent_log += f" | filled password via '{p_sel}'"
+                    except Exception:
+                        try: pg.fill("input[type='password']", password, timeout=2000); agent_log += " | password fallback"
+                        except Exception: pass
+
+                # Click submit
+                if s_sel:
+                    try:
+                        pg.click(s_sel, timeout=3000)
+                        agent_log += f" | clicked '{s_sel}'"
+                    except Exception:
+                        for fb in ["button[type='submit']", "input[type='submit']", "button:text('Sign in')", "button:text('Login')", "button:text('Log in')"]:
+                            try: pg.click(fb, timeout=1000); agent_log += f" | submit fallback '{fb}'"; break
+                            except Exception: pass
+
+                pg.wait_for_load_state("networkidle", timeout=10000)
+                pg.wait_for_timeout(600)
+
+                # Navigate to target URL if different from login URL
+                if target and target != url and pg.url != target:
+                    pg.goto(target, wait_until="networkidle", timeout=30000)
+                    pg.wait_for_timeout(500)
+
+                agent_log += f" | landed on: {pg.url}"
+            else:
+                agent_log += " — page did not look like a login form; taking screenshot as-is"
+
+            pg.screenshot(path=str(out), full_page=False)
+            browser.close()
+            return {"agent_log": agent_log}
+
+        # ── Fallback: no auth ─────────────────────────────────────────────────
+        else:
+            _screenshot_url(url, out)
+            return {"agent_log": "No auth applied"}
+
+
+# ── VLM login form detector ───────────────────────────────────────────────────
+LOGIN_DETECT_PROMPT = """You are a web automation agent. Analyze this screenshot.
+
+Determine if this is a login / sign-in page. If it is, identify the CSS selectors
+for the username/email field, password field, and submit button.
+
+Prefer specific selectors in this order:
+  1. id selector:          #email, #username, #password
+  2. name attribute:       input[name='email'], input[name='username']
+  3. type attribute:       input[type='email'], input[type='password']
+  4. visible text/label:   button:text('Sign in')
+
+Respond ONLY with valid JSON, no extra text:
+{
+  "is_login_page": <true|false>,
+  "confidence": "<high|medium|low>",
+  "username_selector": "<CSS selector or empty string>",
+  "password_selector": "<CSS selector or empty string>",
+  "submit_selector":   "<CSS selector or empty string>",
+  "detection":         "<one-line summary of what you see>"
+}"""
+
+
+def _vlm_detect_login_form(screenshot_b64: str) -> dict:
+    messages = [{
+        "role": "user",
+        "content": [
+            {"type": "text",      "text": LOGIN_DETECT_PROMPT},
+            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{screenshot_b64}"}},
+        ],
+    }]
+    payload = json.dumps({"model": VLM_MODEL, "messages": messages, "max_tokens": 400}).encode()
+    req = urllib.request.Request(
+        f"{API_BASE}/v1/chat/completions", data=payload,
+        headers={"Content-Type": "application/json"}, method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            raw = json.loads(r.read())["choices"][0]["message"]["content"].strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"): raw = raw[4:]
+        return json.loads(raw)
+    except Exception as e:
+        return {"is_login_page": False, "detection": f"VLM detection error: {e}"}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# METRICS & SCORING
+# ══════════════════════════════════════════════════════════════════════════════
 
 def _load_arr(path: Path) -> np.ndarray:
     return np.array(Image.open(path).convert("RGB"))
@@ -299,8 +696,7 @@ def _pixel_metrics(ref_p: Path, cmp_p: Path) -> dict:
     ref = _load_arr(ref_p)
     cmp = _load_arr(cmp_p)
     if ref.shape != cmp.shape:
-        img = Image.fromarray(cmp).resize((ref.shape[1], ref.shape[0]), Image.LANCZOS)
-        cmp = np.array(img)
+        cmp = np.array(Image.fromarray(cmp).resize((ref.shape[1], ref.shape[0]), Image.LANCZOS))
     s    = ssim(ref, cmp, channel_axis=2, data_range=255)
     diff = np.abs(ref.astype(np.int32) - cmp.astype(np.int32))
     mx   = diff.max(axis=2)
@@ -342,27 +738,21 @@ def _encode(path: Path) -> str:
 
 
 def _vlm_judge(ref_p: Path, cmp_p: Path) -> dict:
-    messages = [{
-        "role": "user",
-        "content": [
-            {"type": "text",      "text": RUBRIC_PROMPT},
-            {"type": "text",      "text": "IMAGE 1 — REFERENCE DESIGN:"},
-            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{_encode(ref_p)}"}},
-            {"type": "text",      "text": "IMAGE 2 — IMPLEMENTATION TO EVALUATE:"},
-            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{_encode(cmp_p)}"}},
-        ],
-    }]
+    messages = [{"role": "user", "content": [
+        {"type": "text",      "text": RUBRIC_PROMPT},
+        {"type": "text",      "text": "IMAGE 1 — REFERENCE DESIGN:"},
+        {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{_encode(ref_p)}"}},
+        {"type": "text",      "text": "IMAGE 2 — IMPLEMENTATION TO EVALUATE:"},
+        {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{_encode(cmp_p)}"}},
+    ]}]
     payload = json.dumps({"model": VLM_MODEL, "messages": messages, "max_tokens": 800}).encode()
-    req = urllib.request.Request(
-        f"{API_BASE}/v1/chat/completions", data=payload,
-        headers={"Content-Type": "application/json"}, method="POST",
-    )
+    req = urllib.request.Request(f"{API_BASE}/v1/chat/completions", data=payload,
+        headers={"Content-Type": "application/json"}, method="POST")
     with urllib.request.urlopen(req, timeout=120) as r:
         raw = json.loads(r.read())["choices"][0]["message"]["content"].strip()
     if raw.startswith("```"):
         raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
+        if raw.startswith("json"): raw = raw[4:]
     try:
         return json.loads(raw)
     except Exception:
@@ -371,14 +761,17 @@ def _vlm_judge(ref_p: Path, cmp_p: Path) -> dict:
 
 
 def _grade(s: float) -> dict:
-    if s >= 90: return {"label": "Excellent",  "color": "#16a34a", "letter": "A"}
-    if s >= 75: return {"label": "Good",        "color": "#2563eb", "letter": "B"}
-    if s >= 60: return {"label": "Acceptable",  "color": "#d97706", "letter": "C"}
-    if s >= 40: return {"label": "Needs Work",  "color": "#ea580c", "letter": "D"}
-    return              {"label": "Major Drift", "color": "#dc2626", "letter": "F"}
+    if s >= 90: return {"label": "Excellent",   "color": "#16a34a", "letter": "A"}
+    if s >= 75: return {"label": "Good",         "color": "#2563eb", "letter": "B"}
+    if s >= 60: return {"label": "Acceptable",   "color": "#d97706", "letter": "C"}
+    if s >= 40: return {"label": "Needs Work",   "color": "#ea580c", "letter": "D"}
+    return              {"label": "Major Drift",  "color": "#dc2626", "letter": "F"}
 
 
-# ── Entry point ───────────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# ENTRY POINT
+# ══════════════════════════════════════════════════════════════════════════════
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("server:app", host="0.0.0.0", port=7860, reload=False)
