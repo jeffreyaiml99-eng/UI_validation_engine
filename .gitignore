@@ -1,0 +1,21 @@
+# Screenshots generated at runtime
+playground/screenshots/
+poc/screenshots/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+server.pid
+
+# Temp files
+*.tmp

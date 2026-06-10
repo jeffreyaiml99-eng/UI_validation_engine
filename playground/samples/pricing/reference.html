@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Pricing — Reference</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  min-height:100vh;
+  background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 50%,#0f172a 100%);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  display:flex;flex-direction:column;align-items:center;
+  padding:64px 24px;
+  -webkit-font-smoothing:antialiased;
+  color:#e2e8f0;
+}
+.eyebrow{
+  font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:2px;
+  color:#818cf8;margin-bottom:12px;
+}
+h1{font-size:40px;font-weight:800;text-align:center;letter-spacing:-0.8px;margin-bottom:14px;color:#f1f5f9;}
+.subtitle{font-size:17px;color:#94a3b8;text-align:center;max-width:480px;line-height:1.6;margin-bottom:48px;}
+
+.toggle-row{display:flex;align-items:center;gap:10px;margin-bottom:48px;}
+.toggle-label{font-size:14px;color:#94a3b8;}
+.toggle{
+  width:44px;height:24px;background:#4f46e5;border-radius:12px;
+  position:relative;cursor:pointer;
+}
+.toggle::after{
+  content:"";position:absolute;width:18px;height:18px;background:#fff;
+  border-radius:50%;top:3px;right:4px;transition:right .2s;
+}
+.save-badge{
+  background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);
+  color:#4ade80;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;
+}
+
+.cards{display:flex;gap:20px;align-items:stretch;width:100%;max-width:960px;}
+
+.card{
+  flex:1;background:rgba(30,27,75,.6);border:1px solid rgba(99,102,241,.2);
+  border-radius:20px;padding:32px 28px;display:flex;flex-direction:column;gap:0;
+  backdrop-filter:blur(12px);
+  transition:transform .2s,box-shadow .2s;
+}
+.card:hover{transform:translateY(-4px);box-shadow:0 24px 48px rgba(0,0,0,.4);}
+
+/* Pro card — featured */
+.card.featured{
+  background:linear-gradient(160deg,rgba(79,70,229,.3),rgba(124,58,237,.2));
+  border:1.5px solid rgba(99,102,241,.6);
+  box-shadow:0 0 40px rgba(99,102,241,.2);
+  position:relative;
+}
+.popular-badge{
+  position:absolute;top:-14px;left:50%;transform:translateX(-50%);
+  background:linear-gradient(135deg,#4f46e5,#7c3aed);
+  color:#fff;font-size:11px;font-weight:700;padding:4px 16px;border-radius:20px;
+  white-space:nowrap;
+}
+
+.plan-icon{
+  width:44px;height:44px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:20px;
+}
+.plan-name{font-size:16px;font-weight:700;color:#f1f5f9;margin-bottom:6px;}
+.plan-desc{font-size:13px;color:#94a3b8;margin-bottom:24px;line-height:1.5;}
+
+.price-row{display:flex;align-items:flex-end;gap:4px;margin-bottom:6px;}
+.price-dollar{font-size:24px;font-weight:700;color:#94a3b8;margin-bottom:4px;}
+.price-num{font-size:52px;font-weight:800;line-height:1;color:#f1f5f9;letter-spacing:-2px;}
+.price-period{font-size:14px;color:#64748b;margin-bottom:6px;}
+.billed-note{font-size:12px;color:#475569;margin-bottom:28px;}
+
+.divider{height:1px;background:rgba(99,102,241,.15);margin-bottom:24px;}
+
+.features{list-style:none;display:flex;flex-direction:column;gap:12px;flex:1;margin-bottom:32px;}
+.feature{display:flex;align-items:flex-start;gap:10px;font-size:14px;color:#cbd5e1;}
+.check{
+  width:18px;height:18px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;margin-top:1px;
+}
+.check svg{display:block;}
+.feature.muted{color:#475569;}
+.feature.muted .check{opacity:.3;}
+
+.btn{
+  width:100%;height:46px;border-radius:10px;font-size:14px;font-weight:700;
+  cursor:pointer;border:none;transition:opacity .15s,transform .1s;letter-spacing:0.2px;
+}
+.btn:hover{opacity:.88;transform:translateY(-1px);}
+.btn-outline{
+  background:transparent;border:1.5px solid rgba(99,102,241,.4);
+  color:#818cf8;
+}
+.btn-primary{
+  background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;
+}
+.btn-dark{
+  background:rgba(99,102,241,.15);border:1.5px solid rgba(99,102,241,.3);color:#818cf8;
+}
+</style>
+</head>
+<body>
+<div class="eyebrow">Pricing</div>
+<h1>Simple, transparent pricing</h1>
+<p class="subtitle">Start free, scale as you grow. No hidden fees, cancel anytime.</p>
+
+<div class="toggle-row">
+  <span class="toggle-label">Monthly</span>
+  <div class="toggle"></div>
+  <span class="toggle-label">Annual</span>
+  <span class="save-badge">Save 20%</span>
+</div>
+
+<div class="cards">
+
+  <!-- Free -->
+  <div class="card">
+    <div class="plan-icon" style="background:rgba(100,116,139,.15);">
+      <svg width="22" height="22" fill="none" viewBox="0 0 24 24">
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="#94a3b8" stroke-width="1.8"
+              stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="plan-name">Free</div>
+    <div class="plan-desc">Perfect for individuals exploring the platform.</div>
+    <div class="price-row">
+      <span class="price-dollar">$</span>
+      <span class="price-num">0</span>
+    </div>
+    <div class="billed-note">Free forever</div>
+    <div class="divider"></div>
+    <ul class="features">
+      <li class="feature">
+        <div class="check" style="background:rgba(100,116,139,.2);">
+          <svg width="10" height="10" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+        </div>
+        Up to 3 projects
+      </li>
+      <li class="feature">
+        <div class="check" style="background:rgba(100,116,139,.2);">
+          <svg width="10" height="10" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+        </div>
+        5 GB storage
+      </li>
+      <li class="feature">
+        <div class="check" style="background:rgba(100,116,139,.2);">
+          <svg width="10" height="10" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+        </div>
+        Basic analytics
+      </li>
+      <li class="feature muted">
+        <div class="check" style="background:rgba(100,116,139,.2);">
+          <svg width="10" height="10" viewBox="0 0 12 12"><path d="M3 3l6 6M9 3l-6 6" stroke="#475569" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>
+        </div>
+        Team collaboration
+      </li>
+      <li class="feature muted">
+        <div class="check" style="background:rgba(100,116,139,.2);">
+          <svg width="10" height="10" viewBox="0 0 12 12"><path d="M3 3l6 6M9 3l-6 6" stroke="#475569" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>
+        </div>
+        Priority support
+      </li>
+    </ul>
+    <button class="btn btn-outline">Get started free</button>
+  </div>
+
+  <!-- Pro — featured -->
+  <div class="card featured">
+    <div class="popular-badge">Most Popular</div>
+    <div class="plan-icon" style="background:rgba(99,102,241,.2);">
+      <svg width="22" height="22" fill="none" viewBox="0 0 24 24">
+        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+              stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="plan-name">Pro</div>
+    <div class="plan-desc">For growing teams that need more power and collaboration.</div>
+    <div class="price-row">
+      <span class="price-dollar" style="color:#818cf8">$</span>
+      <span class="price-num" style="color:#c7d2fe">29</span>
+      <span class="price-period">/mo</span>
+    </div>
+    <div class="billed-note">Billed annually · $35 month-to-month</div>
+    <div class="divider"></div>
+    <ul class="features">
+      <li class="feature">
+        <div class="check" style="background:rgba(99,102,241,.25);">
+          <svg width="10" height="10" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+        </div>
+        Unlimited projects
+      </li>
+      <li class="feature">
+        <div class="check" style="background:rgba(99,102,241,.25);">
+          <svg width="10" height="10" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+        </div>
+        100 GB storage
+      </li>
+      <li class="feature">
+        <div class="check" style="background:rgba(99,102,241,.25);">
+          <svg width="10" height="10" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+        </div>
+        Advanced analytics
+      </li>
+      <li class="feature">
+        <div class="check" style="background:rgba(99,102,241,.25);">
+          <svg width="10" height="10" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+        </div>
+        Up to 15 team members
+      </li>
+      <li class="feature">
+        <div class="check" style="background:rgba(99,102,241,.25);">
+          <svg width="10" height="10" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+        </div>
+        Priority support
+      </li>
+    </ul>
+    <button class="btn btn-primary">Start 14-day trial</button>
+  </div>
+
+  <!-- Enterprise -->
+  <div class="card">
+    <div class="plan-icon" style="background:rgba(15,23,42,.4);border:1px solid rgba(99,102,241,.2);">
+      <svg width="22" height="22" fill="none" viewBox="0 0 24 24">
+        <rect x="3" y="3" width="7" height="7" rx="1" stroke="#94a3b8" stroke-width="1.8"/>
+        <rect x="14" y="3" width="7" height="7" rx="1" stroke="#94a3b8" stroke-width="1.8"/>
+        <rect x="3" y="14" width="7" height="7" rx="1" stroke="#94a3b8" stroke-width="1.8"/>
+        <rect x="14" y="14" width="7" height="7" rx="1" stroke="#94a3b8" stroke-width="1.8"/>
+      </svg>
+    </div>
+    <div class="plan-name">Enterprise</div>
+    <div class="plan-desc">Custom solutions for large organisations with advanced needs.</div>
+    <div class="price-row">
+      <span class="price-num" style="font-size:36px;letter-spacing:-1px;">Custom</span>
+    </div>
+    <div class="billed-note">Talk to our sales team</div>
+    <div class="divider"></div>
+    <ul class="features">
+      <li class="feature">
+        <div class="check" style="background:rgba(100,116,139,.2);">
+          <svg width="10" height="10" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+        </div>
+        Everything in Pro
+      </li>
+      <li class="feature">
+        <div class="check" style="background:rgba(100,116,139,.2);">
+          <svg width="10" height="10" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+        </div>
+        Unlimited team members
+      </li>
+      <li class="feature">
+        <div class="check" style="background:rgba(100,116,139,.2);">
+          <svg width="10" height="10" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+        </div>
+        SSO &amp; advanced security
+      </li>
+      <li class="feature">
+        <div class="check" style="background:rgba(100,116,139,.2);">
+          <svg width="10" height="10" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+        </div>
+        Dedicated success manager
+      </li>
+      <li class="feature">
+        <div class="check" style="background:rgba(100,116,139,.2);">
+          <svg width="10" height="10" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+        </div>
+        SLA + 24/7 support
+      </li>
+    </ul>
+    <button class="btn btn-dark">Contact sales</button>
+  </div>
+
+</div>
+</body>
+</html>

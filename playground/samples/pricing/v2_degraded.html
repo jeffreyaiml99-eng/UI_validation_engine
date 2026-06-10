@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Pricing — V2 Degraded</title>
+<style>
+/* Major drift: light background, green CTA, no glassmorphism, table-style layout */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  min-height:100vh;
+  background:#f8fafc;
+  font-family:Arial,Helvetica,sans-serif;
+  color:#1e293b;
+  padding:48px 24px;
+}
+h1{font-size:28px;font-weight:700;text-align:center;margin-bottom:8px;color:#0f172a;}
+.subtitle{font-size:15px;color:#64748b;text-align:center;margin-bottom:32px;}
+.cards{display:flex;gap:16px;max-width:900px;margin:0 auto;}
+.card{
+  flex:1;background:#fff;
+  border:1px solid #e2e8f0;
+  border-radius:8px;padding:24px;
+}
+.card.featured{border-color:#16a34a;border-width:2px;}
+.plan-name{font-size:18px;font-weight:700;color:#0f172a;margin-bottom:4px;}
+.plan-desc{font-size:13px;color:#64748b;margin-bottom:16px;}
+.price-num{font-size:36px;font-weight:800;color:#0f172a;}
+.price-period{font-size:13px;color:#94a3b8;}
+.billed-note{font-size:12px;color:#94a3b8;margin-bottom:16px;}
+.divider{height:1px;background:#e2e8f0;margin-bottom:16px;}
+.features{list-style:none;margin-bottom:24px;}
+.feature{font-size:13px;color:#374151;padding:6px 0;border-bottom:1px solid #f1f5f9;display:flex;gap:8px;}
+.feature::before{content:"✓";color:#16a34a;font-weight:700;}
+.feature.muted{color:#94a3b8;}
+.feature.muted::before{content:"✗";color:#e2e8f0;}
+/* wrong button — green, square */
+.btn{width:100%;padding:12px;font-size:14px;font-weight:600;cursor:pointer;border:none;border-radius:4px;}
+.btn-free{background:#f1f5f9;color:#374151;}
+.btn-pro{background:#16a34a;color:#fff;}
+.btn-ent{background:#fff;border:2px solid #374151;color:#374151;}
+/* missing toggle entirely */
+/* missing eyebrow */
+/* missing icons */
+</style>
+</head>
+<body>
+<h1>Our Pricing Plans</h1>
+<p class="subtitle">Choose the plan that works for you.</p>
+<div class="cards">
+  <div class="card">
+    <div class="plan-name">Free</div>
+    <div class="plan-desc">Perfect for individuals exploring the platform.</div>
+    <div><span class="price-num">$0</span></div>
+    <div class="billed-note">Free forever</div>
+    <div class="divider"></div>
+    <ul class="features">
+      <li class="feature">Up to 3 projects</li>
+      <li class="feature">5 GB storage</li>
+      <li class="feature">Basic analytics</li>
+      <li class="feature muted">Team collaboration</li>
+      <li class="feature muted">Priority support</li>
+    </ul>
+    <button class="btn btn-free">Get started</button>
+  </div>
+  <div class="card featured">
+    <div class="plan-name">Pro ⭐</div>
+    <div class="plan-desc">For growing teams that need more power and collaboration.</div>
+    <div><span class="price-num">$29</span><span class="price-period">/mo</span></div>
+    <div class="billed-note">Billed annually</div>
+    <div class="divider"></div>
+    <ul class="features">
+      <li class="feature">Unlimited projects</li>
+      <li class="feature">100 GB storage</li>
+      <li class="feature">Advanced analytics</li>
+      <li class="feature">Up to 15 team members</li>
+      <li class="feature">Priority support</li>
+    </ul>
+    <button class="btn btn-pro">Start free trial</button>
+  </div>
+  <div class="card">
+    <div class="plan-name">Enterprise</div>
+    <div class="plan-desc">Custom solutions for large organisations.</div>
+    <div><span class="price-num" style="font-size:24px;">Custom</span></div>
+    <div class="billed-note">Contact sales</div>
+    <div class="divider"></div>
+    <ul class="features">
+      <li class="feature">Everything in Pro</li>
+      <li class="feature">Unlimited members</li>
+      <li class="feature">SSO &amp; security</li>
+      <li class="feature">Dedicated manager</li>
+      <li class="feature">SLA support</li>
+    </ul>
+    <button class="btn btn-ent">Contact sales</button>
+  </div>
+</div>
+</body>
+</html>

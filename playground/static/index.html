@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Design Fidelity Playground</title>
+<style>
+/* ── Reset ───────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:        #0d0f14;
+  --surface:   #161b25;
+  --surface2:  #1e2535;
+  --border:    #2a3347;
+  --border2:   #3a4560;
+  --text:      #e2e8f0;
+  --muted:     #64748b;
+  --accent:    #6366f1;
+  --accent2:   #818cf8;
+  --green:     #22c55e;
+  --yellow:    #f59e0b;
+  --red:       #ef4444;
+  --radius:    12px;
+  --radius-sm: 8px;
+}
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Scrollbar ───────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 28px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+.logo {
+  display: flex; align-items: center; gap: 10px;
+}
+.logo-icon {
+  width: 32px; height: 32px;
+  background: linear-gradient(135deg, var(--accent), #a855f7);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+}
+.logo-icon svg { display: block; }
+.logo-name { font-size: 15px; font-weight: 700; color: var(--text); }
+.logo-tag  { font-size: 11px; color: var(--muted); }
+.header-meta {
+  display: flex; align-items: center; gap: 16px;
+}
+.model-badge {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex; align-items: center; gap: 6px;
+}
+.model-badge .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+}
+
+/* ── Main layout ──────────────────────────────────────────────────────────── */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 28px;
+  gap: 20px;
+  max-width: 1600px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* ── Input row ───────────────────────────────────────────────────────────── */
+.input-row {
+  display: grid;
+  grid-template-columns: 1fr 56px 1fr;
+  gap: 0;
+  align-items: stretch;
+}
+.vs-divider {
+  display: flex; align-items: center; justify-content: center;
+}
+.vs-badge {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--surface2);
+  border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: var(--muted);
+  letter-spacing: 0.5px;
+}
+
+/* ── Panel ───────────────────────────────────────────────────────────────── */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.panel-header {
+  padding: 14px 18px 0;
+  border-bottom: 1px solid var(--border);
+}
+.panel-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--muted); margin-bottom: 10px;
+}
+.panel-title {
+  font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 12px;
+}
+
+/* ── Tabs ────────────────────────────────────────────────────────────────── */
+.tabs {
+  display: flex; gap: 4px;
+  padding: 0 2px;
+}
+.tab {
+  padding: 8px 14px;
+  font-size: 12px; font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color .15s, border-color .15s;
+  user-select: none;
+  white-space: nowrap;
+}
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--accent2); border-bottom-color: var(--accent); }
+
+/* ── Tab body ─────────────────────────────────────────────────────────────── */
+.panel-body { padding: 18px; flex: 1; }
+.tab-pane { display: none; }
+.tab-pane.active { display: flex; flex-direction: column; gap: 12px; }
+
+/* ── Drop zone ────────────────────────────────────────────────────────────── */
+.drop-zone {
+  border: 2px dashed var(--border2);
+  border-radius: var(--radius-sm);
+  padding: 32px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+  position: relative;
+}
+.drop-zone:hover, .drop-zone.drag-over {
+  border-color: var(--accent);
+  background: rgba(99,102,241,.05);
+}
+.drop-zone input[type="file"] {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer;
+}
+.drop-icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: var(--surface2);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 12px;
+}
+.drop-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.drop-sub   { font-size: 12px; color: var(--muted); }
+.drop-sub span { color: var(--accent2); cursor: pointer; }
+.drop-preview {
+  display: none;
+  position: relative;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.drop-preview img { width: 100%; display: block; max-height: 220px; object-fit: cover; }
+.drop-preview .remove-btn {
+  position: absolute; top: 8px; right: 8px;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: rgba(0,0,0,.7);
+  border: none; cursor: pointer; color: #fff; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ── Figma hint ──────────────────────────────────────────────────────────── */
+.figma-hint {
+  background: rgba(99,102,241,.08);
+  border: 1px solid rgba(99,102,241,.25);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex; align-items: flex-start; gap: 8px;
+}
+.figma-hint svg { flex-shrink: 0; margin-top: 1px; }
+
+/* ── Inputs ──────────────────────────────────────────────────────────────── */
+.field-label {
+  font-size: 12px; font-weight: 600; color: var(--muted);
+  margin-bottom: 6px; display: block;
+}
+input[type="url"],
+input[type="text"],
+textarea {
+  width: 100%;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--text);
+  font-family: inherit;
+  outline: none;
+  transition: border-color .15s;
+  resize: vertical;
+}
+input[type="url"]:focus,
+input[type="text"]:focus,
+textarea:focus { border-color: var(--accent); }
+input::placeholder, textarea::placeholder { color: var(--muted); }
+textarea { min-height: 140px; font-family: "SF Mono", "Fira Code", monospace; font-size: 12px; }
+
+/* ── Run button ──────────────────────────────────────────────────────────── */
+.run-row {
+  display: flex; justify-content: center; align-items: center; gap: 12px;
+}
+.btn-run {
+  display: flex; align-items: center; gap: 8px;
+  background: linear-gradient(135deg, var(--accent), #a855f7);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 12px 32px;
+  font-size: 14px; font-weight: 700;
+  cursor: pointer;
+  transition: opacity .15s, transform .1s;
+  letter-spacing: 0.2px;
+}
+.btn-run:hover { opacity: .9; transform: translateY(-1px); }
+.btn-run:active { transform: translateY(0); }
+.btn-run:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+.btn-run svg { transition: transform .3s; }
+.btn-run.loading svg { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.btn-reset {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 20px;
+  font-size: 13px; color: var(--muted);
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+}
+.btn-reset:hover { color: var(--text); border-color: var(--border2); }
+
+/* ── Progress bar ────────────────────────────────────────────────────────── */
+#progress-section {
+  display: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+}
+.progress-title {
+  font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 14px;
+}
+.progress-bar-bg {
+  height: 6px; background: var(--surface2);
+  border-radius: 3px; overflow: hidden; margin-bottom: 12px;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), #a855f7);
+  border-radius: 3px;
+  transition: width .4s ease;
+  width: 0%;
+}
+.steps {
+  display: flex; gap: 6px; flex-wrap: wrap;
+}
+.step {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 12px; color: var(--muted);
+  transition: all .3s;
+}
+.step.active { border-color: var(--accent); color: var(--accent2); }
+.step.done   { border-color: #1d4b2e; background: #0d2316; color: var(--green); }
+.step-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor;
+}
+.step.active .step-dot { animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+#progress-msg { font-size: 12px; color: var(--muted); margin-top: 8px; }
+
+/* ── Results section ─────────────────────────────────────────────────────── */
+#results-section { display: none; }
+
+/* ── Score hero ──────────────────────────────────────────────────────────── */
+.score-hero {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px 32px;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+.score-circle-wrap { flex-shrink: 0; }
+.score-circle {
+  width: 120px; height: 120px;
+  border-radius: 50%;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  border: 4px solid;
+  position: relative;
+}
+.score-num {
+  font-size: 36px; font-weight: 800; line-height: 1;
+}
+.score-denom {
+  font-size: 13px; color: var(--muted);
+}
+.grade-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 12px; border-radius: 20px;
+  font-size: 12px; font-weight: 700;
+  margin-bottom: 8px;
+}
+.score-title { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+.score-sub   { font-size: 13px; color: var(--muted); max-width: 480px; line-height: 1.5; }
+
+/* Metric cards */
+.metric-cards {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+.metric-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  text-align: center;
+}
+.mc-val  { font-size: 22px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+.mc-lbl  { font-size: 11px; color: var(--muted); line-height: 1.4; }
+.mc-sub  { font-size: 10px; color: #475569; display: block; }
+
+/* ── Screenshots comparison ───────────────────────────────────────────────── */
+.compare-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.compare-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.compare-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+.compare-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.8px; color: var(--muted);
+}
+.compare-panel img {
+  width: 100%; display: block;
+  max-height: 500px; object-fit: contain;
+  background: #0a0a0a;
+}
+
+/* ── VLM dimension bars ───────────────────────────────────────────────────── */
+.dim-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+}
+.dim-section-title {
+  font-size: 13px; font-weight: 700; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.8px;
+  margin-bottom: 18px;
+  display: flex; align-items: center; gap: 8px;
+}
+.dim-section-title::after {
+  content: ""; flex: 1; height: 1px; background: var(--border);
+}
+.dim-row {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
+}
+.dim-row:last-child { margin-bottom: 0; }
+.dim-name { width: 170px; font-size: 13px; color: var(--text); flex-shrink: 0; }
+.dim-bar-bg {
+  flex: 1; height: 10px; background: var(--surface2);
+  border-radius: 5px; overflow: hidden;
+}
+.dim-bar-fill {
+  height: 100%; border-radius: 5px;
+  transition: width .6s ease;
+}
+.dim-score { width: 46px; text-align: right; font-size: 13px; font-weight: 700; }
+
+/* Summary blockquote */
+.summary-box {
+  background: rgba(99,102,241,.06);
+  border: 1px solid rgba(99,102,241,.2);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 14px 18px;
+  font-size: 13px; color: #94a3b8; line-height: 1.6;
+  font-style: italic;
+  margin-top: 16px;
+}
+
+/* ── Error box ────────────────────────────────────────────────────────────── */
+.error-box {
+  background: rgba(239,68,68,.08);
+  border: 1px solid rgba(239,68,68,.3);
+  border-radius: var(--radius-sm);
+  padding: 14px 18px;
+  font-size: 13px; color: #fca5a5;
+  display: none;
+}
+
+/* ── Diff overlay slider ─────────────────────────────────────────────────── */
+.diff-slider-wrap {
+  position: relative;
+  user-select: none;
+  cursor: col-resize;
+  overflow: hidden;
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+.diff-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.diff-img-impl { position: relative; z-index: 1; }
+.diff-img-ref  {
+  position: absolute; inset: 0; z-index: 2;
+  width: 100%; object-fit: contain;
+  clip-path: inset(0 50% 0 0);
+  transition: none;
+}
+.diff-handle {
+  position: absolute; top: 0; left: 50%; z-index: 3;
+  width: 2px; background: #fff;
+  height: 100%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.diff-handle::before {
+  content: "";
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 28px; height: 28px; border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,.4);
+}
+
+/* ── Samples strip ───────────────────────────────────────────────────────── */
+.samples-strip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 22px;
+}
+.samples-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.samples-title {
+  font-size: 12px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--muted);
+  display: flex; align-items: center; gap: 8px;
+}
+.samples-title::before {
+  content: ""; display: inline-block;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
+}
+.samples-hint { font-size: 11px; color: #3a4560; }
+.sample-cards { display: flex; gap: 12px; flex-wrap: wrap; }
+
+.sample-card {
+  display: flex; align-items: center; gap: 0;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  transition: border-color .15s;
+}
+.sample-card:hover { border-color: var(--border2); }
+.sample-info {
+  padding: 12px 14px;
+  border-right: 1px solid var(--border);
+}
+.sample-emoji { font-size: 18px; display: block; margin-bottom: 4px; }
+.sample-name  { font-size: 13px; font-weight: 700; color: var(--text); }
+.sample-desc  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.sample-variants {
+  display: flex; flex-direction: column;
+}
+.variant-btn {
+  padding: 8px 14px;
+  background: transparent;
+  border: none; border-bottom: 1px solid var(--border);
+  font-size: 11px; font-weight: 600;
+  cursor: pointer;
+  display: flex; align-items: center; gap: 6px;
+  transition: background .12s, color .12s;
+  white-space: nowrap;
+  text-align: left;
+}
+.variant-btn:last-child { border-bottom: none; }
+.variant-btn:hover { background: rgba(99,102,241,.08); }
+.variant-btn .vdot {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+}
+.variant-btn.ref   { color: #60a5fa; }
+.variant-btn.close { color: #4ade80; }
+.variant-btn.bad   { color: #f87171; }
+.variant-btn.ref   .vdot { background: #60a5fa; }
+.variant-btn.close .vdot { background: #4ade80; }
+.variant-btn.bad   .vdot { background: #f87171; }
+
+/* ── Footer ──────────────────────────────────────────────────────────────── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 12px 28px;
+  display: flex; align-items: center; justify-content: center;
+  gap: 6px;
+  font-size: 11px; color: var(--muted);
+  flex-shrink: 0;
+}
+footer span { color: #475569; }
+</style>
+</head>
+<body>
+
+<!-- ── Header ────────────────────────────────────────────────────────────── -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
+              stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div>
+      <div class="logo-name">Design Fidelity Playground</div>
+      <div class="logo-tag">Design → Code evaluation engine</div>
+    </div>
+  </div>
+  <div class="header-meta">
+    <div class="model-badge">
+      <div class="dot"></div>
+      VLM: gpt-4o &nbsp;·&nbsp; SSIM + Pixel metrics
+    </div>
+  </div>
+</header>
+
+<!-- ── Main ──────────────────────────────────────────────────────────────── -->
+<div class="main">
+
+  <!-- ── Sample Library ──────────────────────────────────────────────── -->
+  <div class="samples-strip">
+    <div class="samples-header">
+      <div class="samples-title">Sample Library — click any variant to load instantly</div>
+      <div class="samples-hint">Blue = reference design &nbsp;·&nbsp; Green = close impl &nbsp;·&nbsp; Red = degraded impl</div>
+    </div>
+    <div class="sample-cards" id="sample-cards">
+      <div style="font-size:12px;color:var(--muted);padding:8px 0;">Loading samples…</div>
+    </div>
+  </div>
+
+  <!-- Input panels -->
+  <div class="input-row">
+
+    <!-- Reference panel -->
+    <div class="panel" id="panel-ref">
+      <div class="panel-header">
+        <div class="panel-label">Step 1</div>
+        <div class="panel-title">Reference Design</div>
+        <div class="tabs">
+          <div class="tab active" data-panel="ref" data-tab="upload">Upload Image</div>
+          <div class="tab"        data-panel="ref" data-tab="figma">Figma URL</div>
+          <div class="tab"        data-panel="ref" data-tab="html">HTML Paste</div>
+        </div>
+      </div>
+      <div class="panel-body">
+
+        <!-- Upload tab -->
+        <div class="tab-pane active" id="ref-upload">
+          <div class="drop-zone" id="drop-zone"
+               ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropFile(event)">
+            <input type="file" id="ref-file-input" accept="image/*" onchange="fileSelected(event)"/>
+            <div class="drop-icon">
+              <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"
+                      stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="drop-title">Drop your design here</div>
+            <div class="drop-sub">PNG, JPG, WebP &nbsp;·&nbsp; <span>browse files</span></div>
+          </div>
+          <div class="drop-preview" id="ref-preview">
+            <img id="ref-preview-img" src="" alt=""/>
+            <button class="remove-btn" onclick="clearRef()">×</button>
+          </div>
+          <div class="figma-hint">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="#6366f1" stroke-width="2"/>
+              <path d="M12 8v4m0 4h.01" stroke="#6366f1" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            Export your Figma frame as PNG (File → Export) and upload here, or switch to the Figma URL tab.
+          </div>
+        </div>
+
+        <!-- Figma tab -->
+        <div class="tab-pane" id="ref-figma">
+          <label class="field-label" for="ref-figma-url">Figma File / Frame URL</label>
+          <input type="url" id="ref-figma-url"
+                 placeholder="https://www.figma.com/design/…"/>
+          <div class="figma-hint">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="#6366f1" stroke-width="2"/>
+              <path d="M12 8v4m0 4h.01" stroke="#6366f1" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            Paste a Figma share link. The playground will screenshot it via Playwright
+            (works best with publicly shared files).
+          </div>
+        </div>
+
+        <!-- HTML tab -->
+        <div class="tab-pane" id="ref-html">
+          <label class="field-label" for="ref-html-input">Paste reference HTML</label>
+          <textarea id="ref-html-input" placeholder="<!DOCTYPE html>&#10;<html>…"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- VS divider -->
+    <div class="vs-divider">
+      <div class="vs-badge">VS</div>
+    </div>
+
+    <!-- Implementation panel -->
+    <div class="panel" id="panel-impl">
+      <div class="panel-header">
+        <div class="panel-label">Step 2</div>
+        <div class="panel-title">Your Implementation</div>
+        <div class="tabs">
+          <div class="tab active" data-panel="impl" data-tab="url">Live URL</div>
+          <div class="tab"        data-panel="impl" data-tab="html">HTML Paste</div>
+        </div>
+      </div>
+      <div class="panel-body">
+
+        <!-- URL tab -->
+        <div class="tab-pane active" id="impl-url">
+          <label class="field-label" for="impl-url-input">Web page URL</label>
+          <input type="url" id="impl-url-input"
+                 placeholder="https://your-app.com/login"/>
+          <div class="figma-hint" style="margin-top:4px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="#6366f1" stroke-width="2"/>
+              <path d="M12 8v4m0 4h.01" stroke="#6366f1" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            Enter any live URL — localhost, staging, or production. Playwright will screenshot it
+            at 1280×900.
+          </div>
+        </div>
+
+        <!-- HTML tab -->
+        <div class="tab-pane" id="impl-html">
+          <label class="field-label" for="impl-html-input">Paste implementation HTML</label>
+          <textarea id="impl-html-input" placeholder="<!DOCTYPE html>&#10;<html>…"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Run row -->
+  <div class="run-row">
+    <button class="btn-run" id="run-btn" onclick="runEval()">
+      <svg id="run-icon" width="16" height="16" fill="none" viewBox="0 0 24 24">
+        <path d="M5 3l14 9-14 9V3z" fill="currentColor"/>
+      </svg>
+      Evaluate Fidelity
+    </button>
+    <button class="btn-reset" onclick="resetAll()">Reset</button>
+  </div>
+
+  <!-- Error box -->
+  <div class="error-box" id="error-box"></div>
+
+  <!-- Progress -->
+  <div id="progress-section">
+    <div class="progress-title">Evaluation Pipeline</div>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill" id="prog-bar"></div>
+    </div>
+    <div class="steps">
+      <div class="step" id="step-reference">
+        <div class="step-dot"></div> Reference
+      </div>
+      <div class="step" id="step-impl">
+        <div class="step-dot"></div> Rendering
+      </div>
+      <div class="step" id="step-metrics">
+        <div class="step-dot"></div> SSIM + Pixel
+      </div>
+      <div class="step" id="step-vlm">
+        <div class="step-dot"></div> VLM Judge
+      </div>
+      <div class="step" id="step-composite">
+        <div class="step-dot"></div> Composite
+      </div>
+    </div>
+    <div id="progress-msg"></div>
+  </div>
+
+  <!-- Results -->
+  <div id="results-section">
+
+    <!-- Score hero -->
+    <div class="score-hero" id="score-hero">
+      <div class="score-circle-wrap">
+        <div class="score-circle" id="score-circle">
+          <div class="score-num" id="score-num">—</div>
+          <div class="score-denom">/100</div>
+        </div>
+      </div>
+      <div style="flex:1">
+        <div class="grade-badge" id="grade-badge">—</div>
+        <div class="score-title" id="score-title">Composite Fidelity Score</div>
+        <div class="score-sub" id="score-sub"></div>
+      </div>
+      <div class="metric-cards">
+        <div class="metric-card">
+          <div class="mc-val" id="mc-ssim">—</div>
+          <div class="mc-lbl">SSIM<span class="mc-sub">Structural Similarity</span></div>
+        </div>
+        <div class="metric-card">
+          <div class="mc-val" id="mc-pm5">—</div>
+          <div class="mc-lbl">Pixel Match ≤5<span class="mc-sub">Strict tolerance</span></div>
+        </div>
+        <div class="metric-card">
+          <div class="mc-val" id="mc-pm20">—</div>
+          <div class="mc-lbl">Pixel Match ≤20<span class="mc-sub">Lenient tolerance</span></div>
+        </div>
+        <div class="metric-card">
+          <div class="mc-val" id="mc-vlm">—</div>
+          <div class="mc-lbl">VLM Score<span class="mc-sub">gpt-4o judgment</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Screenshot comparison (with diff slider) -->
+    <div class="compare-row">
+      <div class="compare-panel">
+        <div class="compare-header">
+          <span class="compare-label">Reference Design</span>
+          <span style="font-size:11px;color:var(--muted);">Golden standard</span>
+        </div>
+        <img id="ref-result-img" src="" alt="Reference"/>
+      </div>
+      <div class="compare-panel">
+        <div class="compare-header">
+          <span class="compare-label">Implementation</span>
+          <span style="font-size:11px;color:var(--muted);">Drag to compare →</span>
+        </div>
+        <div class="diff-slider-wrap" id="diff-slider"
+             onmousedown="sliderStart(event)" ontouchstart="sliderTouch(event)">
+          <img class="diff-img diff-img-impl" id="impl-result-img" src="" alt="Implementation"/>
+          <img class="diff-img diff-img-ref"  id="diff-ref-img"    src="" alt="Reference overlay"/>
+          <div class="diff-handle" id="diff-handle"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VLM dimension bars -->
+    <div class="dim-section">
+      <div class="dim-section-title">VLM Rubric Breakdown</div>
+
+      <div class="dim-row">
+        <span class="dim-name">Layout &amp; Structure</span>
+        <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-layout" style="width:0%"></div></div>
+        <span class="dim-score" id="score-layout">—</span>
+      </div>
+      <div class="dim-row">
+        <span class="dim-name">Typography</span>
+        <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-typo" style="width:0%"></div></div>
+        <span class="dim-score" id="score-typo">—</span>
+      </div>
+      <div class="dim-row">
+        <span class="dim-name">Color &amp; Visual Style</span>
+        <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-color" style="width:0%"></div></div>
+        <span class="dim-score" id="score-color">—</span>
+      </div>
+      <div class="dim-row">
+        <span class="dim-name">Component Fidelity</span>
+        <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-comp" style="width:0%"></div></div>
+        <span class="dim-score" id="score-comp">—</span>
+      </div>
+      <div class="dim-row">
+        <span class="dim-name">Spacing &amp; Alignment</span>
+        <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-space" style="width:0%"></div></div>
+        <span class="dim-score" id="score-space">—</span>
+      </div>
+
+      <div class="summary-box" id="summary-box"></div>
+    </div>
+
+  </div><!-- /results -->
+</div><!-- /main -->
+
+<footer>
+  <svg width="12" height="12" fill="none" viewBox="0 0 24 24">
+    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
+          stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  Design Fidelity Playground &nbsp;·&nbsp;
+  <span>Composite = 40% VLM + 35% SSIM + 25% Pixel-≤20</span>
+</footer>
+
+<script>
+// ── Tab switching ─────────────────────────────────────────────────────────
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    const panel = tab.dataset.panel;
+    const t     = tab.dataset.tab;
+    document.querySelectorAll(`.tab[data-panel="${panel}"]`).forEach(x => x.classList.remove("active"));
+    tab.classList.add("active");
+    document.querySelectorAll(`#panel-${panel} .tab-pane`).forEach(p => p.classList.remove("active"));
+    document.getElementById(`${panel}-${t}`)?.classList.add("active");
+  });
+});
+
+// ── Drag & drop ───────────────────────────────────────────────────────────
+let refImageFile = null;
+
+function dragOver(e) {
+  e.preventDefault();
+  document.getElementById("drop-zone").classList.add("drag-over");
+}
+function dragLeave(e) {
+  document.getElementById("drop-zone").classList.remove("drag-over");
+}
+function dropFile(e) {
+  e.preventDefault();
+  dragLeave(e);
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith("image/")) setRefFile(f);
+}
+function fileSelected(e) {
+  const f = e.target.files[0];
+  if (f) setRefFile(f);
+}
+function setRefFile(f) {
+  refImageFile = f;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById("ref-preview-img").src = ev.target.result;
+    document.getElementById("ref-preview").style.display = "block";
+    document.getElementById("drop-zone").style.display  = "none";
+  };
+  reader.readAsDataURL(f);
+}
+function clearRef() {
+  refImageFile = null;
+  document.getElementById("ref-preview").style.display = "none";
+  document.getElementById("drop-zone").style.display   = "";
+  document.getElementById("ref-file-input").value = "";
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function activeTab(panel) {
+  return document.querySelector(`.tab[data-panel="${panel}"].active`)?.dataset.tab;
+}
+function showError(msg) {
+  const el = document.getElementById("error-box");
+  el.textContent = "Error: " + msg;
+  el.style.display = "block";
+}
+function hideError() {
+  document.getElementById("error-box").style.display = "none";
+}
+function setStep(id, state) {
+  // state: '' | 'active' | 'done'
+  const el = document.getElementById("step-" + id);
+  if (!el) return;
+  el.className = "step" + (state ? " " + state : "");
+}
+function setProgress(pct, msg) {
+  document.getElementById("prog-bar").style.width = pct + "%";
+  document.getElementById("progress-msg").textContent = msg || "";
+}
+
+// ── Run evaluation ────────────────────────────────────────────────────────
+async function runEval() {
+  hideError();
+  const runBtn  = document.getElementById("run-btn");
+  const runIcon = document.getElementById("run-icon");
+
+  // Gather inputs
+  const refTab  = activeTab("ref");
+  const implTab = activeTab("impl");
+
+  const fd = new FormData();
+  fd.append("ref_type",  refTab);
+  fd.append("impl_type", implTab);
+
+  // Reference
+  if (refTab === "upload") {
+    if (!refImageFile) { showError("Please upload a reference image."); return; }
+    fd.append("ref_image", refImageFile);
+  } else if (refTab === "figma") {
+    const v = document.getElementById("ref-figma-url").value.trim();
+    if (!v) { showError("Please enter a Figma URL."); return; }
+    fd.append("ref_url", v);
+    fd.set("ref_type", "url");
+  } else {
+    const v = document.getElementById("ref-html-input").value.trim();
+    if (!v) { showError("Please paste reference HTML."); return; }
+    fd.append("ref_html", v);
+  }
+
+  // Implementation
+  if (implTab === "url") {
+    const v = document.getElementById("impl-url-input").value.trim();
+    if (!v) { showError("Please enter an implementation URL."); return; }
+    fd.append("impl_url", v);
+  } else {
+    const v = document.getElementById("impl-html-input").value.trim();
+    if (!v) { showError("Please paste implementation HTML."); return; }
+    fd.append("impl_html", v);
+  }
+
+  // UI: loading state
+  runBtn.disabled = true;
+  runBtn.classList.add("loading");
+  runIcon.innerHTML = `<circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.5" stroke-dasharray="28" stroke-dashoffset="14" fill="none"/>`;
+
+  document.getElementById("results-section").style.display = "none";
+  document.getElementById("progress-section").style.display = "block";
+  ["reference","impl","metrics","vlm","composite"].forEach(s => setStep(s, ""));
+  setProgress(0, "Starting evaluation …");
+
+  // Submit job
+  let jobId;
+  try {
+    const res = await fetch("/api/evaluate", { method: "POST", body: fd });
+    const data = await res.json();
+    jobId = data.job_id;
+  } catch(e) {
+    showError("Failed to submit: " + e.message);
+    resetBtn(runBtn, runIcon); return;
+  }
+
+  // SSE stream
+  const es = new EventSource(`/api/stream/${jobId}`);
+  es.onmessage = ev => {
+    const msg = JSON.parse(ev.data);
+    handleMsg(msg, runBtn, runIcon, es);
+  };
+  es.onerror = () => {
+    showError("Stream connection error.");
+    resetBtn(runBtn, runIcon);
+    es.close();
+  };
+}
+
+function handleMsg(msg, runBtn, runIcon, es) {
+  if (msg.type === "progress") {
+    setProgress(msg.pct, msg.msg);
+    // Activate/complete steps
+    const stepMap = { reference:"reference", impl:"impl", metrics:"metrics", vlm:"vlm", composite:"composite" };
+    if (msg.step in stepMap) {
+      // Mark previous steps done
+      const order = ["reference","impl","metrics","vlm","composite"];
+      const idx   = order.indexOf(msg.step);
+      order.slice(0, idx).forEach(s => setStep(s, "done"));
+      setStep(msg.step, "active");
+    }
+    // Partial image updates
+    if (msg.ref_img)  document.getElementById("ref-result-img").src = msg.ref_img;
+    if (msg.impl_img) document.getElementById("impl-result-img").src = msg.impl_img;
+
+  } else if (msg.type === "done") {
+    es.close();
+    setProgress(100, "Complete ✓");
+    ["reference","impl","metrics","vlm","composite"].forEach(s => setStep(s, "done"));
+    showResults(msg);
+    resetBtn(runBtn, runIcon);
+
+  } else if (msg.type === "error") {
+    es.close();
+    showError(msg.msg);
+    if (msg.trace) console.error(msg.trace);
+    resetBtn(runBtn, runIcon);
+  }
+}
+
+function resetBtn(btn, icon) {
+  btn.disabled = false;
+  btn.classList.remove("loading");
+  icon.innerHTML = `<path d="M5 3l14 9-14 9V3z" fill="currentColor"/>`;
+}
+
+// ── Show results ──────────────────────────────────────────────────────────
+function showResults(data) {
+  document.getElementById("results-section").style.display = "flex";
+  document.getElementById("results-section").style.flexDirection = "column";
+  document.getElementById("results-section").style.gap = "16px";
+
+  const g = data.grade;
+  const c = data.composite;
+
+  // Score circle
+  const circle = document.getElementById("score-circle");
+  circle.style.borderColor = g.color;
+  document.getElementById("score-num").textContent  = c;
+  document.getElementById("score-num").style.color  = g.color;
+
+  // Grade badge
+  const badge = document.getElementById("grade-badge");
+  badge.textContent = `${g.letter} — ${g.label}`;
+  badge.style.background = g.color + "22";
+  badge.style.color       = g.color;
+  badge.style.border      = `1px solid ${g.color}55`;
+
+  document.getElementById("score-sub").textContent =
+    data.vlm?.summary || "";
+
+  // Metric cards
+  document.getElementById("mc-ssim").textContent  = data.pixel.ssim;
+  document.getElementById("mc-pm5").textContent   = data.pixel.pixel_match_5 + "%";
+  document.getElementById("mc-pm20").textContent  = data.pixel.pixel_match_20 + "%";
+  document.getElementById("mc-vlm").textContent   = (data.vlm?.total ?? "—") + "/100";
+
+  // Screenshots
+  if (data.ref_img) {
+    document.getElementById("ref-result-img").src  = data.ref_img;
+    document.getElementById("diff-ref-img").src    = data.ref_img;
+  }
+  if (data.impl_img) {
+    document.getElementById("impl-result-img").src = data.impl_img;
+  }
+
+  // Dimension bars
+  const dims = [
+    ["layout",  "layout_structure",   "bar-layout", "score-layout"],
+    ["typo",    "typography",          "bar-typo",   "score-typo"],
+    ["color",   "color_visual_style",  "bar-color",  "score-color"],
+    ["comp",    "component_fidelity",  "bar-comp",   "score-comp"],
+    ["space",   "spacing_alignment",   "bar-space",  "score-space"],
+  ];
+  dims.forEach(([, key, barId, scoreId]) => {
+    const val = data.vlm?.[key] ?? 0;
+    const pct = val / 20 * 100;
+    const col = pct >= 70 ? "#6366f1" : pct >= 40 ? "#f59e0b" : "#ef4444";
+    const bar = document.getElementById(barId);
+    bar.style.width      = pct + "%";
+    bar.style.background = col;
+    document.getElementById(scoreId).textContent = val + "/20";
+    document.getElementById(scoreId).style.color = col;
+  });
+
+  // Summary
+  document.getElementById("summary-box").textContent = data.vlm?.summary || "";
+
+  // Scroll to results
+  setTimeout(() => {
+    document.getElementById("results-section").scrollIntoView({ behavior:"smooth", block:"start" });
+  }, 100);
+}
+
+// ── Diff slider ──────────────────────────────────────────────────────────
+let sliding = false;
+function sliderStart(e) {
+  sliding = true;
+  moveSlider(e.clientX, e.currentTarget);
+  document.addEventListener("mousemove", sliderMove);
+  document.addEventListener("mouseup", () => { sliding = false; document.removeEventListener("mousemove", sliderMove); });
+}
+function sliderTouch(e) {
+  const wrap = e.currentTarget;
+  function onMove(ev) { moveSlider(ev.touches[0].clientX, wrap); }
+  function onEnd()    { document.removeEventListener("touchmove", onMove); }
+  document.addEventListener("touchmove", onMove);
+  document.addEventListener("touchend",  onEnd);
+  moveSlider(e.touches[0].clientX, wrap);
+}
+function sliderMove(e) { if (!sliding) return; const w = document.getElementById("diff-slider"); moveSlider(e.clientX, w); }
+function moveSlider(clientX, wrap) {
+  const rect = wrap.getBoundingClientRect();
+  let pct = (clientX - rect.left) / rect.width * 100;
+  pct = Math.max(0, Math.min(100, pct));
+  document.getElementById("diff-ref-img").style.clipPath = `inset(0 ${100 - pct}% 0 0)`;
+  document.getElementById("diff-handle").style.left       = pct + "%";
+}
+
+// ── Sample Library ────────────────────────────────────────────────────────
+const SAMPLE_IDS = ["login", "pricing", "signup"];
+
+async function loadSampleLibrary() {
+  const container = document.getElementById("sample-cards");
+  try {
+    const res = await fetch("/api/samples");
+    const samples = await res.json();
+    const ids     = ["login","pricing","signup"];
+
+    container.innerHTML = "";
+    samples.forEach((s, i) => {
+      const id = ids[i] || i;
+      const card = document.createElement("div");
+      card.className = "sample-card";
+      card.innerHTML = `
+        <div class="sample-info">
+          <span class="sample-emoji">${s.icon}</span>
+          <div class="sample-name">${s.title}</div>
+          <div class="sample-desc">${s.description}</div>
+        </div>
+        <div class="sample-variants">
+          <button class="variant-btn ref"   onclick="loadSample('${id}','reference','ref')">
+            <span class="vdot"></span>Reference design
+          </button>
+          <button class="variant-btn close" onclick="loadSample('${id}','close','impl')">
+            <span class="vdot"></span>Close implementation
+          </button>
+          <button class="variant-btn bad"   onclick="loadSample('${id}','degraded','impl')">
+            <span class="vdot"></span>Degraded implementation
+          </button>
+        </div>`;
+      container.appendChild(card);
+    });
+
+    // Add "pair" quick-run buttons
+    const pairWrap = document.createElement("div");
+    pairWrap.style.cssText = "display:flex;flex-direction:column;gap:6px;justify-content:center;";
+    samples.forEach((s, i) => {
+      const id = ids[i] || i;
+      ["close","degraded"].forEach(variant => {
+        const label  = variant === "close" ? "Good" : "Degraded";
+        const color  = variant === "close" ? "#4ade80" : "#f87171";
+        const btn    = document.createElement("button");
+        btn.style.cssText = `background:transparent;border:1px solid ${color}33;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;color:${color};cursor:pointer;white-space:nowrap;`;
+        btn.textContent   = `▶ ${s.icon} ${label}`;
+        btn.onclick       = () => loadAndRun(id, variant);
+        pairWrap.appendChild(btn);
+      });
+    });
+    container.appendChild(pairWrap);
+
+  } catch(e) {
+    container.innerHTML = `<div style="font-size:12px;color:#f87171;">Failed to load samples: ${e.message}</div>`;
+  }
+}
+
+async function loadSample(sampleId, variant, target) {
+  try {
+    const res  = await fetch(`/api/samples/${sampleId}/${variant}`);
+    const data = await res.json();
+    const html = data.html;
+
+    if (target === "ref") {
+      // Switch to HTML tab in reference panel
+      document.querySelectorAll('.tab[data-panel="ref"]').forEach(t => t.classList.remove("active"));
+      document.querySelector('.tab[data-panel="ref"][data-tab="html"]').classList.add("active");
+      document.querySelectorAll('#panel-ref .tab-pane').forEach(p => p.classList.remove("active"));
+      document.getElementById("ref-html").classList.add("active");
+      document.getElementById("ref-html-input").value = html;
+    } else {
+      // Switch to HTML tab in impl panel
+      document.querySelectorAll('.tab[data-panel="impl"]').forEach(t => t.classList.remove("active"));
+      document.querySelector('.tab[data-panel="impl"][data-tab="html"]').classList.add("active");
+      document.querySelectorAll('#panel-impl .tab-pane').forEach(p => p.classList.remove("active"));
+      document.getElementById("impl-html").classList.add("active");
+      document.getElementById("impl-html-input").value = html;
+    }
+
+    // Visual flash on the input
+    const ta = target === "ref" ? document.getElementById("ref-html-input") : document.getElementById("impl-html-input");
+    ta.style.borderColor = target === "ref" ? "#60a5fa" : "#4ade80";
+    setTimeout(() => { ta.style.borderColor = ""; }, 800);
+
+  } catch(e) {
+    showError("Failed to load sample: " + e.message);
+  }
+}
+
+async function loadAndRun(sampleId, variant) {
+  // Load reference + chosen variant then run
+  await loadSample(sampleId, "reference", "ref");
+  await loadSample(sampleId, variant,     "impl");
+  // Tiny delay so textarea values settle
+  setTimeout(() => runEval(), 100);
+}
+
+// Load samples on page init
+loadSampleLibrary();
+
+// ── Reset ─────────────────────────────────────────────────────────────────
+function resetAll() {
+  clearRef();
+  document.getElementById("ref-figma-url").value  = "";
+  document.getElementById("ref-html-input").value = "";
+  document.getElementById("impl-url-input").value  = "";
+  document.getElementById("impl-html-input").value = "";
+  document.getElementById("progress-section").style.display = "none";
+  document.getElementById("results-section").style.display  = "none";
+  hideError();
+  setProgress(0, "");
+}
+</script>
+</body>
+</html>
