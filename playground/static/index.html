@@ -619,6 +619,40 @@ textarea { min-height: 140px; font-family: "SF Mono", "Fira Code", monospace; fo
 .platform-btn.active { background: rgba(99,102,241,.15); border-color: var(--accent); color: var(--accent2); }
 .platform-viewport-hint { margin-left: auto; font-size: 11px; color: var(--muted); }
 
+/* ── Windows app frame ───────────────────────────────────────────────────── */
+.win-frame-wrap {
+  display: none; flex-direction: column;
+  align-items: center; padding: 16px 0;
+}
+.win-frame-wrap.visible { display: flex; }
+.win-frame {
+  border: 1px solid #3a4560;
+  border-radius: 8px 8px 4px 4px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,.5);
+  width: 100%;
+  max-width: 900px;
+}
+.win-titlebar {
+  height: 32px;
+  background: #202020;
+  display: flex; align-items: center;
+  padding: 0 12px; gap: 8px;
+  flex-shrink: 0;
+}
+.win-app-icon { width: 14px; height: 14px; opacity: .8; flex-shrink: 0; }
+.win-title { font-size: 12px; color: rgba(255,255,255,.85); flex: 1; }
+.win-controls { display: flex; margin-right: -12px; }
+.win-btn {
+  width: 46px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: default; color: rgba(255,255,255,.7); font-size: 10px;
+  transition: background .1s;
+}
+.win-btn:hover { background: rgba(255,255,255,.1); }
+.win-btn.close:hover { background: #c42b1c; color: #fff; }
+.win-frame img { display: block; width: 100%; }
+
 /* ── Phone frame ─────────────────────────────────────────────────────────── */
 .phone-frame-wrap {
   display: none;
@@ -707,6 +741,14 @@ footer span { color: #475569; }
     <button class="platform-btn" data-platform="android_tablet" onclick="setPlatform('android_tablet',this)">
       <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="18" rx="3" stroke="currentColor" stroke-width="2"/><circle cx="19" cy="12" r="1" fill="currentColor"/></svg>
       Android Tablet
+    </button>
+    <button class="platform-btn" data-platform="windows_hd" onclick="setPlatform('windows_hd',this)">
+      <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="M2 7h20M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Windows HD
+    </button>
+    <button class="platform-btn" data-platform="windows_fhd" onclick="setPlatform('windows_fhd',this)">
+      <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="M2 7h20M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Windows FHD
     </button>
     <span class="platform-viewport-hint" id="viewport-hint">1280 × 900 px &nbsp;·&nbsp; Desktop rubric</span>
   </div>
@@ -798,7 +840,8 @@ footer span { color: #475569; }
         <div class="tabs">
           <div class="tab active" data-panel="impl" data-tab="url">Live URL</div>
           <div class="tab"        data-panel="impl" data-tab="html">HTML Paste</div>
-          <div class="tab"        data-panel="impl" data-tab="android" id="tab-android" style="display:none;">Android</div>
+          <div class="tab"        data-panel="impl" data-tab="android"  id="tab-android"  style="display:none;">Android</div>
+          <div class="tab"        data-panel="impl" data-tab="windows"  id="tab-windows"  style="display:none;">Windows</div>
         </div>
       </div>
       <div class="panel-body">
@@ -984,6 +1027,55 @@ footer span { color: #475569; }
           </div>
         </div>
 
+        <!-- Windows tab -->
+        <div class="tab-pane" id="impl-windows">
+          <!-- Sub-mode selector -->
+          <div class="auth-type-row" style="margin-bottom:14px;">
+            <button class="auth-type-btn active" data-wtype="upload"  onclick="setWindowsMode('upload',this)">
+              <svg width="11" height="11" fill="none" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Upload Screenshot
+            </button>
+            <button class="auth-type-btn" data-wtype="win_url" onclick="setWindowsMode('win_url',this)">
+              <svg width="11" height="11" fill="none" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="M2 7h20" stroke="currentColor" stroke-width="1.5"/></svg>
+              Windows URL
+            </button>
+          </div>
+
+          <!-- Upload sub-pane -->
+          <div id="windows-upload-pane">
+            <div class="drop-zone" id="windows-drop-zone"
+                 ondragover="dragOver(event,'windows-drop-zone')" ondragleave="dragLeave(event,'windows-drop-zone')" ondrop="dropWindows(event)">
+              <input type="file" id="windows-file-input" accept="image/*" onchange="windowsFileSelected(event)"/>
+              <div class="drop-icon">
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
+                  <rect x="2" y="3" width="20" height="14" rx="2" stroke="#6366f1" stroke-width="2"/>
+                  <path d="M2 7h20M8 3v4M16 3v4" stroke="#6366f1" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div class="drop-title">Drop Windows app screenshot</div>
+              <div class="drop-sub">PNG, JPG &nbsp;·&nbsp; <span>browse files</span></div>
+            </div>
+            <div class="drop-preview" id="windows-preview">
+              <img id="windows-preview-img" src="" alt=""/>
+              <button class="remove-btn" onclick="clearWindows()">×</button>
+            </div>
+            <div class="auth-hint" style="margin-top:8px;">
+              <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" stroke="#6366f1" stroke-width="2"/></svg>
+              Use Win + PrtScn or Snipping Tool to capture your Windows application, then upload here.
+            </div>
+          </div>
+
+          <!-- Windows URL sub-pane -->
+          <div id="windows-url-pane" style="display:none;">
+            <label class="field-label" for="windows-url-input">Web / Electron app URL</label>
+            <input type="url" id="windows-url-input" placeholder="https://your-app.com/dashboard"/>
+            <div class="auth-hint" style="margin-top:8px;">
+              <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" stroke="#6366f1" stroke-width="2"/></svg>
+              Playwright renders this URL at the selected Windows viewport with a Windows Chrome user-agent. Works for web apps and Electron apps running locally.
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -1081,11 +1173,26 @@ footer span { color: #475569; }
             <img id="ref-result-img-mobile" src="" alt="Reference (mobile)"/>
           </div>
         </div>
+        <!-- Windows: window chrome frame -->
+        <div class="win-frame-wrap" id="ref-win-wrap">
+          <div class="win-frame">
+            <div class="win-titlebar">
+              <svg class="win-app-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6.5" height="6.5" fill="#f25022"/><rect x="8.5" y="1" width="6.5" height="6.5" fill="#7fba00"/><rect x="1" y="8.5" width="6.5" height="6.5" fill="#00a4ef"/><rect x="8.5" y="8.5" width="6.5" height="6.5" fill="#ffb900"/></svg>
+              <span class="win-title">Reference Design</span>
+              <div class="win-controls">
+                <div class="win-btn">─</div>
+                <div class="win-btn">□</div>
+                <div class="win-btn close">✕</div>
+              </div>
+            </div>
+            <img id="ref-result-img-windows" src="" alt="Reference (windows)"/>
+          </div>
+        </div>
       </div>
       <div class="compare-panel" id="impl-compare-panel">
         <div class="compare-header">
           <span class="compare-label">Implementation</span>
-          <span style="font-size:11px;color:var(--muted);">Drag to compare →</span>
+          <span style="font-size:11px;color:var(--muted);" id="impl-compare-label">Drag to compare →</span>
         </div>
         <div class="diff-slider-wrap" id="diff-slider"
              onmousedown="sliderStart(event)" ontouchstart="sliderTouch(event)">
@@ -1098,6 +1205,21 @@ footer span { color: #475569; }
           <div class="phone-frame">
             <div class="phone-notch"></div>
             <img id="impl-result-img-mobile" src="" alt="Implementation (mobile)"/>
+          </div>
+        </div>
+        <!-- Windows window chrome overlay -->
+        <div class="win-frame-wrap" id="impl-win-wrap" style="display:none;">
+          <div class="win-frame">
+            <div class="win-titlebar">
+              <svg class="win-app-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6.5" height="6.5" fill="#f25022"/><rect x="8.5" y="1" width="6.5" height="6.5" fill="#7fba00"/><rect x="1" y="8.5" width="6.5" height="6.5" fill="#00a4ef"/><rect x="8.5" y="8.5" width="6.5" height="6.5" fill="#ffb900"/></svg>
+              <span class="win-title">Implementation</span>
+              <div class="win-controls">
+                <div class="win-btn">─</div>
+                <div class="win-btn">□</div>
+                <div class="win-btn close">✕</div>
+              </div>
+            </div>
+            <img id="impl-result-img-windows" src="" alt="Implementation (windows)"/>
           </div>
         </div>
       </div>
@@ -1165,6 +1287,35 @@ footer span { color: #475569; }
         </div>
       </div>
 
+      <!-- Windows rubric dimensions -->
+      <div id="windows-rubric" style="display:none;">
+        <div class="dim-row">
+          <span class="dim-name">Title Bar &amp; Chrome</span>
+          <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-titlebar" style="width:0%"></div></div>
+          <span class="dim-score" id="score-titlebar">—</span>
+        </div>
+        <div class="dim-row">
+          <span class="dim-name">Navigation &amp; Menus</span>
+          <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-navmenus" style="width:0%"></div></div>
+          <span class="dim-score" id="score-navmenus">—</span>
+        </div>
+        <div class="dim-row">
+          <span class="dim-name">Controls &amp; Components</span>
+          <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-controls" style="width:0%"></div></div>
+          <span class="dim-score" id="score-controls">—</span>
+        </div>
+        <div class="dim-row">
+          <span class="dim-name">Typography &amp; Icons</span>
+          <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-wintypo" style="width:0%"></div></div>
+          <span class="dim-score" id="score-wintypo">—</span>
+        </div>
+        <div class="dim-row">
+          <span class="dim-name">Layout &amp; Spacing</span>
+          <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-winlay" style="width:0%"></div></div>
+          <span class="dim-score" id="score-winlay">—</span>
+        </div>
+      </div>
+
       <div class="summary-box" id="summary-box"></div>
     </div>
 
@@ -1187,8 +1338,11 @@ const VIEWPORT_INFO = {
   desktop:        { label: "1280 × 900 px · Desktop rubric" },
   android_phone:  { label: "390 × 844 px · Mobile rubric (phone)" },
   android_tablet: { label: "768 × 1024 px · Mobile rubric (tablet)" },
+  windows_hd:     { label: "1366 × 768 px · Windows rubric (HD)" },
+  windows_fhd:    { label: "1920 × 1080 px · Windows rubric (Full HD)" },
 };
-const IS_MOBILE_PLATFORM = p => p === "android_phone" || p === "android_tablet";
+const IS_MOBILE_PLATFORM  = p => p === "android_phone"  || p === "android_tablet";
+const IS_WINDOWS_PLATFORM = p => p === "windows_hd" || p === "windows_fhd";
 
 function setPlatform(platform, btn) {
   currentPlatform = platform;
@@ -1196,14 +1350,29 @@ function setPlatform(platform, btn) {
   btn.classList.add("active");
   document.getElementById("viewport-hint").textContent = VIEWPORT_INFO[platform]?.label || "";
 
-  // Show/hide Android tab in impl panel
   const androidTab = document.getElementById("tab-android");
+  const windowsTab = document.getElementById("tab-windows");
+
   if (IS_MOBILE_PLATFORM(platform)) {
     androidTab.style.display = "";
+    windowsTab.style.display = "none";
+    // If windows tab was active, switch back
+    if (document.querySelector('.tab[data-panel="impl"][data-tab="windows"]')?.classList.contains("active")) {
+      document.querySelector('.tab[data-panel="impl"][data-tab="url"]').click();
+    }
+  } else if (IS_WINDOWS_PLATFORM(platform)) {
+    windowsTab.style.display = "";
+    androidTab.style.display = "none";
+    // If android tab was active, switch back
+    if (document.querySelector('.tab[data-panel="impl"][data-tab="android"]')?.classList.contains("active")) {
+      document.querySelector('.tab[data-panel="impl"][data-tab="url"]').click();
+    }
   } else {
     androidTab.style.display = "none";
-    // If android tab is currently active, switch back to URL tab
-    if (document.querySelector('.tab[data-panel="impl"][data-tab="android"]')?.classList.contains("active")) {
+    windowsTab.style.display = "none";
+    // If android or windows tab was active, switch back to URL
+    const activeImplTab = document.querySelector('.tab[data-panel="impl"].active')?.dataset.tab;
+    if (activeImplTab === "android" || activeImplTab === "windows") {
       document.querySelector('.tab[data-panel="impl"][data-tab="url"]').click();
     }
   }
@@ -1287,6 +1456,45 @@ async function refreshDevices() {
     sel.innerHTML = "<option value=''>Error</option>";
     status.textContent = e.message;
   }
+}
+
+// ── Windows sub-modes ────────────────────────────────────────────────────
+let currentWindowsMode = "upload";
+let windowsImageFile   = null;
+
+function setWindowsMode(mode, btn) {
+  currentWindowsMode = mode;
+  document.querySelectorAll("#impl-windows .auth-type-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  document.getElementById("windows-upload-pane").style.display = mode === "upload"  ? "block" : "none";
+  document.getElementById("windows-url-pane").style.display    = mode === "win_url" ? "block" : "none";
+}
+
+function dropWindows(e) {
+  e.preventDefault();
+  dragLeave(e, "windows-drop-zone");
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith("image/")) setWindowsFile(f);
+}
+function windowsFileSelected(e) {
+  const f = e.target.files[0];
+  if (f) setWindowsFile(f);
+}
+function setWindowsFile(f) {
+  windowsImageFile = f;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById("windows-preview-img").src = ev.target.result;
+    document.getElementById("windows-preview").style.display = "block";
+    document.getElementById("windows-drop-zone").style.display = "none";
+  };
+  reader.readAsDataURL(f);
+}
+function clearWindows() {
+  windowsImageFile = null;
+  document.getElementById("windows-preview").style.display = "none";
+  document.getElementById("windows-drop-zone").style.display = "";
+  document.getElementById("windows-file-input").value = "";
 }
 
 // ── Auth accordion ───────────────────────────────────────────────────────
@@ -1450,6 +1658,17 @@ async function runEval() {
       fd.set("impl_type", "url");
       fd.append("impl_url", v);
     }
+  } else if (implTab === "windows") {
+    if (currentWindowsMode === "upload") {
+      if (!windowsImageFile) { showError("Please upload a Windows app screenshot."); return; }
+      fd.set("impl_type", "windows_upload");
+      fd.append("impl_android_image", windowsImageFile);  // reuses same server field
+    } else if (currentWindowsMode === "win_url") {
+      const v = document.getElementById("windows-url-input").value.trim();
+      if (!v) { showError("Please enter a URL for Windows rendering."); return; }
+      fd.set("impl_type", "url");
+      fd.append("impl_url", v);
+    }
   } else {
     showError("Unknown implementation type."); return;
   }
@@ -1557,32 +1776,43 @@ function showResults(data) {
   document.getElementById("mc-pm20").textContent  = data.pixel.pixel_match_20 + "%";
   document.getElementById("mc-vlm").textContent   = (data.vlm?.total ?? "—") + "/100";
 
-  // Screenshots + phone frame toggle
-  const isMobile = data.is_mobile;
+  // Screenshots + platform frame toggle
+  const isMobile  = data.is_mobile;
+  const isWindows = data.is_windows;
+  const platType  = data.plat_type || "desktop";
+
   if (data.ref_img) {
-    document.getElementById("ref-result-img").src  = data.ref_img;
-    document.getElementById("ref-result-img-mobile").src = data.ref_img;
-    document.getElementById("diff-ref-img").src    = data.ref_img;
+    document.getElementById("ref-result-img").src          = data.ref_img;
+    document.getElementById("ref-result-img-mobile").src   = data.ref_img;
+    document.getElementById("ref-result-img-windows").src  = data.ref_img;
+    document.getElementById("diff-ref-img").src            = data.ref_img;
   }
   if (data.impl_img) {
-    document.getElementById("impl-result-img").src = data.impl_img;
-    document.getElementById("impl-result-img-mobile").src = data.impl_img;
+    document.getElementById("impl-result-img").src         = data.impl_img;
+    document.getElementById("impl-result-img-mobile").src  = data.impl_img;
+    document.getElementById("impl-result-img-windows").src = data.impl_img;
   }
 
-  // Phone frame visibility
-  document.getElementById("ref-result-img").style.display  = isMobile ? "none" : "";
+  // Frame visibility
+  document.getElementById("ref-result-img").style.display  = (isMobile || isWindows) ? "none" : "";
   document.getElementById("ref-phone-wrap").classList.toggle("visible", isMobile);
-  // For the diff slider: on mobile show phone frame below, hide slider
-  document.getElementById("diff-slider").style.display      = isMobile ? "none" : "";
-  document.getElementById("impl-phone-wrap").style.display  = isMobile ? "flex" : "none";
-  document.getElementById("ref-compare-label").textContent  = isMobile ? "Mobile design" : "Golden standard";
+  document.getElementById("ref-win-wrap").classList.toggle("visible", isWindows);
 
-  // VLM rubric panels
-  const isMobileResult = isMobile;
-  document.getElementById("desktop-rubric").style.display = isMobileResult ? "none" : "";
-  document.getElementById("mobile-rubric").style.display  = isMobileResult ? "block" : "none";
-  document.getElementById("rubric-title").textContent =
-    isMobileResult ? "VLM Mobile Rubric Breakdown" : "VLM Rubric Breakdown";
+  document.getElementById("diff-slider").style.display      = (isMobile || isWindows) ? "none" : "";
+  document.getElementById("impl-phone-wrap").style.display  = isMobile  ? "flex"  : "none";
+  document.getElementById("impl-win-wrap").style.display    = isWindows ? "flex"  : "none";
+
+  document.getElementById("ref-compare-label").textContent =
+    isMobile ? "Mobile design" : isWindows ? "Windows design" : "Golden standard";
+  document.getElementById("impl-compare-label").textContent =
+    (isMobile || isWindows) ? "" : "Drag to compare →";
+
+  // VLM rubric panel visibility
+  document.getElementById("desktop-rubric").style.display = platType === "desktop"  ? ""      : "none";
+  document.getElementById("mobile-rubric").style.display  = platType === "mobile"   ? "block" : "none";
+  document.getElementById("windows-rubric").style.display = platType === "windows"  ? "block" : "none";
+  const rubricTitles = { desktop: "VLM Rubric Breakdown", mobile: "VLM Mobile Rubric Breakdown", windows: "VLM Windows Rubric Breakdown" };
+  document.getElementById("rubric-title").textContent = rubricTitles[platType] || "VLM Rubric Breakdown";
 
   function renderBar(barId, scoreId, val) {
     const pct = val / 20 * 100;
@@ -1595,20 +1825,24 @@ function showResults(data) {
     document.getElementById(scoreId).style.color = col;
   }
 
-  if (isMobileResult) {
-    // Mobile dimensions
+  if (platType === "mobile") {
     renderBar("bar-appbar", "score-appbar", data.vlm?.app_bar_navigation ?? 0);
     renderBar("bar-touch",  "score-touch",  data.vlm?.touch_targets ?? 0);
     renderBar("bar-mtypo",  "score-mtypo",  data.vlm?.typography ?? 0);
     renderBar("bar-mlay",   "score-mlay",   data.vlm?.layout_responsive ?? 0);
     renderBar("bar-mcomp",  "score-mcomp",  data.vlm?.component_fidelity ?? 0);
+  } else if (platType === "windows") {
+    renderBar("bar-titlebar", "score-titlebar", data.vlm?.titlebar_chrome    ?? 0);
+    renderBar("bar-navmenus", "score-navmenus", data.vlm?.navigation_menus   ?? 0);
+    renderBar("bar-controls", "score-controls", data.vlm?.controls_components ?? 0);
+    renderBar("bar-wintypo",  "score-wintypo",  data.vlm?.typography_icons   ?? 0);
+    renderBar("bar-winlay",   "score-winlay",   data.vlm?.layout_spacing     ?? 0);
   } else {
-    // Desktop dimensions
-    renderBar("bar-layout", "score-layout", data.vlm?.layout_structure ?? 0);
-    renderBar("bar-typo",   "score-typo",   data.vlm?.typography ?? 0);
+    renderBar("bar-layout", "score-layout", data.vlm?.layout_structure   ?? 0);
+    renderBar("bar-typo",   "score-typo",   data.vlm?.typography         ?? 0);
     renderBar("bar-color",  "score-color",  data.vlm?.color_visual_style ?? 0);
     renderBar("bar-comp",   "score-comp",   data.vlm?.component_fidelity ?? 0);
-    renderBar("bar-space",  "score-space",  data.vlm?.spacing_alignment ?? 0);
+    renderBar("bar-space",  "score-space",  data.vlm?.spacing_alignment  ?? 0);
   }
 
   // Summary

@@ -56,7 +56,24 @@ VIEWPORTS = {
     "desktop":        {"width": 1280, "height": 900},
     "android_phone":  {"width": 390,  "height": 844},
     "android_tablet": {"width": 768,  "height": 1024},
+    "windows_hd":     {"width": 1366, "height": 768},
+    "windows_fhd":    {"width": 1920, "height": 1080},
 }
+
+def _platform_type(platform: str) -> str:
+    """Return 'mobile', 'windows', or 'desktop' rubric category."""
+    if platform in ("android_phone", "android_tablet"):
+        return "mobile"
+    if platform in ("windows_hd", "windows_fhd"):
+        return "windows"
+    return "desktop"
+
+# Windows user-agent for Playwright (makes responsive sites render in desktop mode)
+WINDOWS_UA = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/124.0.0.0 Safari/537.36"
+)
 
 # ADB binary (installed on remote server)
 ADB_PATH = os.path.expanduser("~/platform-tools/adb")
@@ -307,11 +324,11 @@ async def evaluate(
     ref_url:          Optional[str]          = Form(None),
     ref_figma_token:  Optional[str]          = Form(None),  # Figma PAT
     # ── Implementation inputs ─────────────────────────────────────────────────
-    impl_type:        str                    = Form(...),  # "url"|"html"|"adb"|"android_upload"
+    impl_type:        str                    = Form(...),  # "url"|"html"|"adb"|"android_upload"|"windows_upload"
     impl_url:         Optional[str]          = Form(None),
     impl_html:        Optional[str]          = Form(None),
     impl_adb_device:  Optional[str]          = Form(None),  # ADB device serial
-    impl_android_image: Optional[UploadFile] = File(None),  # direct Android screenshot upload
+    impl_android_image: Optional[UploadFile] = File(None),  # Android or Windows screenshot upload
     # ── Auth config for implementation URL ───────────────────────────────────
     impl_auth_type:   Optional[str]          = Form(None),  # "none"|"form"|"cookies"|"basic"
     impl_auth_user:   Optional[str]          = Form(None),
@@ -389,7 +406,9 @@ async def _run_evaluation(
         if data: payload.update(data)
         await q.put(payload)
 
-    is_mobile = platform in ("android_phone", "android_tablet")
+    plat_type = _platform_type(platform)   # "desktop" | "mobile" | "windows"
+    is_mobile   = plat_type == "mobile"
+    is_windows  = plat_type == "windows"
 
     try:
         loop = asyncio.get_event_loop()
@@ -429,24 +448,25 @@ async def _run_evaluation(
 
         # ── Step 2: Implementation ────────────────────────────────────────────
         auth_label = f" [{auth_cfg['type']} auth]" if auth_cfg["type"] != "none" else ""
-        plat_label = f" [{platform}]" if is_mobile else ""
+        plat_label = f" [{platform}]" if platform != "desktop" else ""
         await emit("impl", 25, f"Rendering implementation{plat_label}{auth_label} …")
 
         if impl_type == "adb" and impl_adb_device:
             await emit("impl", 30, f"Capturing ADB screenshot from device {impl_adb_device} …")
             await loop.run_in_executor(None, _screenshot_adb, impl_adb_device, impl_ss)
 
-        elif impl_type == "android_upload" and android_image_bytes:
+        elif impl_type in ("android_upload", "windows_upload") and android_image_bytes:
             img = Image.open(io.BytesIO(android_image_bytes)).convert("RGB")
             img.save(str(impl_ss), "PNG")
 
         elif impl_type == "url" and impl_url:
+            ua = WINDOWS_UA if is_windows else None
             if auth_cfg["type"] == "none":
-                await loop.run_in_executor(None, _screenshot_url, impl_url, impl_ss, viewport)
+                await loop.run_in_executor(None, _screenshot_url, impl_url, impl_ss, viewport, ua)
             else:
                 await emit("impl", 30, f"Auth agent starting ({auth_cfg['type']}) …")
                 result = await loop.run_in_executor(
-                    None, _screenshot_with_auth, impl_url, impl_ss, auth_cfg, viewport
+                    None, _screenshot_with_auth, impl_url, impl_ss, auth_cfg, viewport, ua
                 )
                 if result.get("agent_log"):
                     await emit("impl", 38, result["agent_log"])
@@ -467,8 +487,9 @@ async def _run_evaluation(
         await emit("metrics", 65, "Pixel metrics done ✓", {"pixel": px})
 
         # ── Step 4: VLM judge ─────────────────────────────────────────────────
-        rubric = MOBILE_RUBRIC_PROMPT if is_mobile else RUBRIC_PROMPT
-        await emit("vlm", 70, f"Asking VLM judge ({VLM_MODEL}, {'mobile' if is_mobile else 'desktop'} rubric) …")
+        rubric_map = {"mobile": MOBILE_RUBRIC_PROMPT, "windows": WINDOWS_RUBRIC_PROMPT}
+        rubric = rubric_map.get(plat_type, RUBRIC_PROMPT)
+        await emit("vlm", 70, f"Asking VLM judge ({VLM_MODEL}, {plat_type} rubric) …")
         vlm = await loop.run_in_executor(None, _vlm_judge, ref_ss, impl_ss, rubric)
         await emit("vlm", 88, "VLM scoring done ✓", {"vlm": vlm})
 
@@ -481,7 +502,9 @@ async def _run_evaluation(
             "ref_img": _img_url(ref_ss), "impl_img": _img_url(impl_ss),
             "auth_type": auth_cfg["type"],
             "platform": platform,
+            "plat_type": plat_type,
             "is_mobile": is_mobile,
+            "is_windows": is_windows,
         })
 
     except Exception as exc:
@@ -497,13 +520,16 @@ def _img_url(path: Path) -> str:
     return f"/screenshots/{path.name}"
 
 
-def _screenshot_url(url: str, out: Path, viewport: dict = None):
+def _screenshot_url(url: str, out: Path, viewport: dict = None, user_agent: str = None):
     """Plain screenshot — no auth."""
     from playwright.sync_api import sync_playwright
     vp = viewport or VIEWPORT
     with sync_playwright() as p:
         b = p.chromium.launch()
-        pg = b.new_page(viewport=vp)
+        ctx_kwargs = {"viewport": vp}
+        if user_agent:
+            ctx_kwargs["user_agent"] = user_agent
+        pg = b.new_page(**ctx_kwargs)
         pg.goto(url, wait_until="networkidle", timeout=30000)
         pg.wait_for_timeout(500)
         pg.screenshot(path=str(out), full_page=False)
@@ -595,7 +621,7 @@ def _screenshot_figma(figma_url: str, token: str, out: Path):
 
 
 # ── Auth-aware screenshot (form / cookies / basic) ────────────────────────────
-def _screenshot_with_auth(url: str, out: Path, auth_cfg: dict, viewport: dict = None) -> dict:
+def _screenshot_with_auth(url: str, out: Path, auth_cfg: dict, viewport: dict = None, user_agent: str = None) -> dict:
     """
     Returns {"agent_log": str} with a description of what the agent did.
     """
@@ -607,13 +633,14 @@ def _screenshot_with_auth(url: str, out: Path, auth_cfg: dict, viewport: dict = 
     password  = auth_cfg["pass"]
     cookies   = auth_cfg["cookies"]
     target    = auth_cfg["target"] or url
+    ua_kwargs = {"user_agent": user_agent} if user_agent else {}
 
     with sync_playwright() as p:
 
         # ── Cookie injection ──────────────────────────────────────────────────
         if auth_type == "cookies":
             browser = p.chromium.launch()
-            ctx     = browser.new_context(viewport=vp)
+            ctx     = browser.new_context(viewport=vp, **ua_kwargs)
             parsed  = urllib.parse.urlparse(url)
             base_url = f"{parsed.scheme}://{parsed.netloc}"
             cookie_list = []
@@ -635,7 +662,8 @@ def _screenshot_with_auth(url: str, out: Path, auth_cfg: dict, viewport: dict = 
         elif auth_type == "basic":
             browser = p.chromium.launch()
             ctx     = browser.new_context(viewport=vp,
-                                          http_credentials={"username": user, "password": password})
+                                          http_credentials={"username": user, "password": password},
+                                          **ua_kwargs)
             pg      = ctx.new_page()
             pg.goto(target, wait_until="networkidle", timeout=30000)
             pg.wait_for_timeout(500)
@@ -646,7 +674,7 @@ def _screenshot_with_auth(url: str, out: Path, auth_cfg: dict, viewport: dict = 
         # ── Form auth (VLM agent) ─────────────────────────────────────────────
         elif auth_type == "form":
             browser = p.chromium.launch()
-            ctx     = browser.new_context(viewport=vp)
+            ctx     = browser.new_context(viewport=vp, **ua_kwargs)
             pg      = ctx.new_page()
 
             # Navigate to the login URL
@@ -810,6 +838,30 @@ Respond ONLY with valid JSON — no extra text:
   "component_fidelity":  <0-20>,
   "total":               <0-100>,
   "summary":             "<2-3 sentence verdict on the biggest wins and gaps for mobile>"
+}"""
+
+
+WINDOWS_RUBRIC_PROMPT = """You are a Windows desktop application UI/UX design quality evaluator. You are given two screenshots:
+  IMAGE 1: The REFERENCE DESIGN (golden standard — Figma mockup or design screenshot).
+  IMAGE 2: A WINDOWS APPLICATION IMPLEMENTATION to evaluate.
+
+Score the implementation on EACH of the 5 Windows-specific dimensions below from 0-20 (total = 100):
+
+1. **Title Bar & Window Chrome** (0-20): Window title text, app icon, minimize/maximize/close buttons position and style, menu bar if present.
+2. **Navigation & Menus** (0-20): Ribbon, toolbar, sidebar nav, context menus, breadcrumbs — presence, accuracy, and Fluent/Windows 11 styling.
+3. **Controls & Components** (0-20): Accuracy of Windows controls — buttons, text boxes, checkboxes, radio buttons, dropdowns, list views, tree views, data grids.
+4. **Typography & Icons** (0-20): Segoe UI (or Segoe UI Variable) font usage, icon style (Fluent/MDL2/Segoe MDL2 Assets), text density, label alignment.
+5. **Layout & Spacing** (0-20): Windows HIG-compliant panel layout, status bar, acrylic/mica material effects, consistent padding and gutter sizes.
+
+Respond ONLY with valid JSON — no extra text:
+{
+  "titlebar_chrome":    <0-20>,
+  "navigation_menus":   <0-20>,
+  "controls_components":<0-20>,
+  "typography_icons":   <0-20>,
+  "layout_spacing":     <0-20>,
+  "total":              <0-100>,
+  "summary":            "<2-3 sentence verdict on the biggest wins and gaps for the Windows app>"
 }"""
 
 
