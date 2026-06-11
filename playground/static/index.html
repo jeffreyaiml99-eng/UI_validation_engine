@@ -4,855 +4,777 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Design Fidelity Playground</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <style>
-/* ── Reset ───────────────────────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* ══════════════════════════════════════════
+   DESIGN TOKENS
+══════════════════════════════════════════ */
 :root {
-  --bg:        #0d0f14;
-  --surface:   #161b25;
-  --surface2:  #1e2535;
-  --border:    #2a3347;
-  --border2:   #3a4560;
-  --text:      #e2e8f0;
-  --muted:     #64748b;
-  --accent:    #6366f1;
-  --accent2:   #818cf8;
-  --green:     #22c55e;
-  --yellow:    #f59e0b;
-  --red:       #ef4444;
-  --radius:    12px;
-  --radius-sm: 8px;
-}
-html, body { height: 100%; }
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  font-size: 14px;
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  -webkit-font-smoothing: antialiased;
+  --bg:       #060911;
+  --bg-1:     #0B0F1C;
+  --bg-2:     #111827;
+  --bg-3:     #1A2236;
+  --bg-4:     #1F2D42;
+
+  --b1: rgba(255,255,255,0.05);
+  --b2: rgba(255,255,255,0.09);
+  --b3: rgba(255,255,255,0.16);
+
+  --t1: #F0F4FF;
+  --t2: #8896B3;
+  --t3: #3D4E68;
+
+  --accent:   #7C5CFC;
+  --accent2:  #A78BFA;
+  --a-bg:     rgba(124,92,252,0.10);
+  --a-bd:     rgba(124,92,252,0.28);
+
+  --green:    #34D399;
+  --yellow:   #FBBF24;
+  --red:      #F87171;
+  --blue:     #60A5FA;
+  --g-bg:     rgba(52,211,153,0.10);
+  --r-bg:     rgba(248,113,113,0.10);
+
+  --sh-sm: 0 1px 4px rgba(0,0,0,.5);
+  --sh-md: 0 4px 16px rgba(0,0,0,.5), 0 1px 4px rgba(0,0,0,.4);
+  --sh-lg: 0 16px 48px rgba(0,0,0,.6), 0 4px 16px rgba(0,0,0,.5);
+
+  --r1: 6px;
+  --r2: 10px;
+  --r3: 14px;
+  --r4: 20px;
+  --rFull: 9999px;
+
+  --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --mono: "SF Mono","Fira Code","Cascadia Code",Consolas,monospace;
 }
 
-/* ── Scrollbar ───────────────────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+/* ══════════════════════════════════════════
+   RESET & BASE
+══════════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{height:100%;-webkit-text-size-adjust:100%}
+body{
+  background:var(--bg);color:var(--t1);
+  font-family:var(--font);font-size:13px;line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;display:flex;flex-direction:column;
+}
+::selection{background:rgba(124,92,252,.28)}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--b3);border-radius:var(--rFull)}
+::-webkit-scrollbar-thumb:hover{background:var(--t3)}
 
-/* ── Header ──────────────────────────────────────────────────────────────── */
-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 28px;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
-  flex-shrink: 0;
+/* ══════════════════════════════════════════
+   HEADER
+══════════════════════════════════════════ */
+.header{
+  background:rgba(11,15,28,.92);
+  backdrop-filter:blur(20px) saturate(160%);
+  -webkit-backdrop-filter:blur(20px) saturate(160%);
+  border-bottom:1px solid var(--b1);
+  padding:0 32px;height:54px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;flex-shrink:0;
 }
-.logo {
-  display: flex; align-items: center; gap: 10px;
+.header-left{display:flex;align-items:center;gap:12px}
+.logo-mark{
+  width:30px;height:30px;
+  background:linear-gradient(135deg,var(--accent),#A855F7);
+  border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+  box-shadow:0 0 20px rgba(124,92,252,.3);
 }
-.logo-icon {
-  width: 32px; height: 32px;
-  background: linear-gradient(135deg, var(--accent), #a855f7);
-  border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-}
-.logo-icon svg { display: block; }
-.logo-name { font-size: 15px; font-weight: 700; color: var(--text); }
-.logo-tag  { font-size: 11px; color: var(--muted); }
-.header-meta {
-  display: flex; align-items: center; gap: 16px;
-}
-.model-badge {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 4px 12px;
-  font-size: 12px;
-  color: var(--muted);
-  display: flex; align-items: center; gap: 6px;
-}
-.model-badge .dot {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--green);
-  box-shadow: 0 0 6px var(--green);
-}
+.logo-text{display:flex;flex-direction:column;gap:0}
+.logo-name{font-size:14px;font-weight:700;color:var(--t1);letter-spacing:-.02em;line-height:1.2}
+.logo-tag {font-size:11px;color:var(--t3);letter-spacing:.01em}
+.h-sep{width:1px;height:18px;background:var(--b2);margin:0 4px}
 
-/* ── Main layout ──────────────────────────────────────────────────────────── */
-.main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  padding: 24px 28px;
-  gap: 20px;
-  max-width: 1600px;
-  width: 100%;
-  margin: 0 auto;
+/* Platform pills */
+.plat-group{
+  display:flex;align-items:center;gap:2px;
+  background:var(--bg-2);border:1px solid var(--b2);
+  border-radius:var(--rFull);padding:3px;
 }
+.plat-pill{
+  display:flex;align-items:center;gap:5px;
+  padding:4px 10px;border-radius:var(--rFull);
+  font-size:11px;font-weight:600;color:var(--t2);
+  cursor:pointer;border:none;background:transparent;
+  transition:color .15s,background .15s;
+  white-space:nowrap;user-select:none;font-family:var(--font);
+}
+.plat-pill:hover{color:var(--t1);background:var(--bg-3)}
+.plat-pill.active{
+  background:var(--accent);color:#fff;
+  box-shadow:0 2px 8px rgba(124,92,252,.4);
+}
+.header-right{display:flex;align-items:center;gap:10px}
+.status-chip{
+  display:flex;align-items:center;gap:6px;
+  background:var(--bg-2);border:1px solid var(--b2);
+  border-radius:var(--rFull);padding:4px 12px;
+  font-size:11px;color:var(--t2);
+}
+.live-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--green);box-shadow:0 0 6px var(--green);
+  animation:blink 2.4s ease-in-out infinite;
+}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
 
-/* ── Input row ───────────────────────────────────────────────────────────── */
-.input-row {
-  display: grid;
-  grid-template-columns: 1fr 56px 1fr;
-  gap: 0;
-  align-items: stretch;
-}
-.vs-divider {
-  display: flex; align-items: center; justify-content: center;
-}
-.vs-badge {
-  width: 36px; height: 36px; border-radius: 50%;
-  background: var(--surface2);
-  border: 2px solid var(--border);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 11px; font-weight: 700; color: var(--muted);
-  letter-spacing: 0.5px;
-}
-
-/* ── Panel ───────────────────────────────────────────────────────────────── */
-.panel {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-.panel-header {
-  padding: 14px 18px 0;
-  border-bottom: 1px solid var(--border);
-}
-.panel-label {
-  font-size: 11px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 1px; color: var(--muted); margin-bottom: 10px;
-}
-.panel-title {
-  font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 12px;
+/* ══════════════════════════════════════════
+   PAGE CONTENT
+══════════════════════════════════════════ */
+.page{
+  flex:1;max-width:1440px;width:100%;margin:0 auto;
+  padding:24px 32px;display:flex;flex-direction:column;gap:18px;
 }
 
-/* ── Tabs ────────────────────────────────────────────────────────────────── */
-.tabs {
-  display: flex; gap: 4px;
-  padding: 0 2px;
+/* ══════════════════════════════════════════
+   SECTION LABEL
+══════════════════════════════════════════ */
+.sec-label{
+  font-size:10px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.08em;color:var(--t3);
+  display:flex;align-items:center;gap:10px;
 }
-.tab {
-  padding: 8px 14px;
-  font-size: 12px; font-weight: 600;
-  color: var(--muted);
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: color .15s, border-color .15s;
-  user-select: none;
-  white-space: nowrap;
-}
-.tab:hover { color: var(--text); }
-.tab.active { color: var(--accent2); border-bottom-color: var(--accent); }
+.sec-label::after{content:"";flex:1;height:1px;background:var(--b1)}
 
-/* ── Tab body ─────────────────────────────────────────────────────────────── */
-.panel-body { padding: 18px; flex: 1; }
-.tab-pane { display: none; }
-.tab-pane.active { display: flex; flex-direction: column; gap: 12px; }
+/* ══════════════════════════════════════════
+   CARDS
+══════════════════════════════════════════ */
+.card{
+  background:var(--bg-1);border:1px solid var(--b1);
+  border-radius:var(--r3);overflow:hidden;
+}
+.card-head{
+  padding:12px 20px;border-bottom:1px solid var(--b1);
+  background:var(--bg-2);
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+}
+.card-eyebrow{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:2px}
+.card-title{font-size:14px;font-weight:700;color:var(--t1);letter-spacing:-.01em}
+.card-body{padding:18px 20px}
 
-/* ── Drop zone ────────────────────────────────────────────────────────────── */
-.drop-zone {
-  border: 2px dashed var(--border2);
-  border-radius: var(--radius-sm);
-  padding: 32px 20px;
-  text-align: center;
-  cursor: pointer;
-  transition: border-color .2s, background .2s;
-  position: relative;
+/* ══════════════════════════════════════════
+   TABS
+══════════════════════════════════════════ */
+.tab-bar{display:flex;gap:0;padding:0 2px}
+.tab{
+  padding:9px 14px;font-size:12px;font-weight:600;color:var(--t2);
+  cursor:pointer;border-bottom:2px solid transparent;
+  transition:color .15s,border-color .15s;user-select:none;white-space:nowrap;
 }
-.drop-zone:hover, .drop-zone.drag-over {
-  border-color: var(--accent);
-  background: rgba(99,102,241,.05);
-}
-.drop-zone input[type="file"] {
-  position: absolute; inset: 0; opacity: 0; cursor: pointer;
-}
-.drop-icon {
-  width: 40px; height: 40px; border-radius: 10px;
-  background: var(--surface2);
-  display: flex; align-items: center; justify-content: center;
-  margin: 0 auto 12px;
-}
-.drop-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
-.drop-sub   { font-size: 12px; color: var(--muted); }
-.drop-sub span { color: var(--accent2); cursor: pointer; }
-.drop-preview {
-  display: none;
-  position: relative;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-}
-.drop-preview img { width: 100%; display: block; max-height: 220px; object-fit: cover; }
-.drop-preview .remove-btn {
-  position: absolute; top: 8px; right: 8px;
-  width: 26px; height: 26px; border-radius: 50%;
-  background: rgba(0,0,0,.7);
-  border: none; cursor: pointer; color: #fff; font-size: 14px;
-  display: flex; align-items: center; justify-content: center;
-}
+.tab:hover{color:var(--t1)}
+.tab.active{color:var(--accent2);border-bottom-color:var(--accent)}
 
-/* ── Figma hint ──────────────────────────────────────────────────────────── */
-.figma-hint {
-  background: rgba(99,102,241,.08);
-  border: 1px solid rgba(99,102,241,.25);
-  border-radius: var(--radius-sm);
-  padding: 10px 14px;
-  font-size: 12px;
-  color: var(--muted);
-  display: flex; align-items: flex-start; gap: 8px;
+/* ══════════════════════════════════════════
+   FORM ELEMENTS
+══════════════════════════════════════════ */
+.field{display:flex;flex-direction:column;gap:6px}
+.field-label{
+  font-size:12px;font-weight:600;color:var(--t2);letter-spacing:.005em;
 }
-.figma-hint svg { flex-shrink: 0; margin-top: 1px; }
+.field-label .dim{font-weight:400;color:var(--t3)}
 
-/* ── Inputs ──────────────────────────────────────────────────────────────── */
-.field-label {
-  font-size: 12px; font-weight: 600; color: var(--muted);
-  margin-bottom: 6px; display: block;
-}
 input[type="url"],
 input[type="text"],
-textarea {
-  width: 100%;
-  background: var(--surface2);
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 10px 12px;
-  font-size: 13px;
-  color: var(--text);
-  font-family: inherit;
-  outline: none;
-  transition: border-color .15s;
-  resize: vertical;
+input[type="password"],
+select,
+textarea{
+  width:100%;
+  background:var(--bg-2);border:1px solid var(--b2);
+  border-radius:var(--r2);padding:9px 12px;
+  font-size:13px;color:var(--t1);font-family:var(--font);
+  outline:none;transition:border-color .15s,box-shadow .15s;
+  -webkit-appearance:none;
 }
-input[type="url"]:focus,
-input[type="text"]:focus,
-textarea:focus { border-color: var(--accent); }
-input::placeholder, textarea::placeholder { color: var(--muted); }
-textarea { min-height: 140px; font-family: "SF Mono", "Fira Code", monospace; font-size: 12px; }
+input::placeholder,textarea::placeholder{color:var(--t3)}
+input:hover,textarea:hover,select:hover{border-color:var(--b3)}
+input:focus,textarea:focus,select:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(124,92,252,.15);
+}
+textarea{min-height:140px;resize:vertical;font-family:var(--mono);font-size:12px;line-height:1.6}
+select{
+  cursor:pointer;padding-right:28px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6' stroke='%23566380' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;
+}
 
-/* ── Run button ──────────────────────────────────────────────────────────── */
-.run-row {
-  display: flex; justify-content: center; align-items: center; gap: 12px;
+/* ══════════════════════════════════════════
+   BUTTONS
+══════════════════════════════════════════ */
+.btn-run{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:12px 36px;border-radius:var(--r2);
+  font-size:14px;font-weight:700;font-family:var(--font);letter-spacing:-.01em;
+  background:linear-gradient(135deg,var(--accent) 0%,#9333EA 100%);color:#fff;border:none;
+  cursor:pointer;user-select:none;
+  box-shadow:0 4px 20px rgba(124,92,252,.4),0 1px 4px rgba(0,0,0,.4);
+  transition:box-shadow .2s,opacity .15s,transform .1s;
+  position:relative;overflow:hidden;
 }
-.btn-run {
-  display: flex; align-items: center; gap: 8px;
-  background: linear-gradient(135deg, var(--accent), #a855f7);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-sm);
-  padding: 12px 32px;
-  font-size: 14px; font-weight: 700;
-  cursor: pointer;
-  transition: opacity .15s, transform .1s;
-  letter-spacing: 0.2px;
+.btn-run:hover:not(:disabled){
+  box-shadow:0 6px 28px rgba(124,92,252,.55),0 2px 8px rgba(0,0,0,.4);
+  opacity:.95;transform:translateY(-1px);
 }
-.btn-run:hover { opacity: .9; transform: translateY(-1px); }
-.btn-run:active { transform: translateY(0); }
-.btn-run:disabled { opacity: .4; cursor: not-allowed; transform: none; }
-.btn-run svg { transition: transform .3s; }
-.btn-run.loading svg { animation: spin 1s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
+.btn-run:active{transform:translateY(0)}
+.btn-run:disabled{opacity:.38;cursor:not-allowed;transform:none}
+.btn-run.loading::after{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);
+  animation:shimmer 1.4s ease-in-out infinite;
+}
+@keyframes shimmer{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+.btn-run svg{transition:transform .3s}
 
-.btn-reset {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 12px 20px;
-  font-size: 13px; color: var(--muted);
-  cursor: pointer;
-  transition: color .15s, border-color .15s;
+.btn-ghost{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:9px 18px;border-radius:var(--r2);
+  font-size:13px;font-weight:600;font-family:var(--font);
+  background:var(--bg-2);color:var(--t2);border:1px solid var(--b2);
+  cursor:pointer;transition:color .15s,border-color .15s,background .15s;
 }
-.btn-reset:hover { color: var(--text); border-color: var(--border2); }
+.btn-ghost:hover{color:var(--t1);border-color:var(--b3);background:var(--bg-3)}
 
-/* ── Progress bar ────────────────────────────────────────────────────────── */
-#progress-section {
-  display: none;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 20px 24px;
+/* Segment buttons (auth type, sub-mode selectors) */
+.seg-row{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:14px}
+.seg-btn{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:5px 11px;border-radius:var(--r1);
+  font-size:12px;font-weight:600;font-family:var(--font);
+  border:1px solid var(--b2);background:var(--bg-2);color:var(--t2);
+  cursor:pointer;transition:all .15s;
 }
-.progress-title {
-  font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 14px;
-}
-.progress-bar-bg {
-  height: 6px; background: var(--surface2);
-  border-radius: 3px; overflow: hidden; margin-bottom: 12px;
-}
-.progress-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent), #a855f7);
-  border-radius: 3px;
-  transition: width .4s ease;
-  width: 0%;
-}
-.steps {
-  display: flex; gap: 6px; flex-wrap: wrap;
-}
-.step {
-  display: flex; align-items: center; gap: 6px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 4px 12px;
-  font-size: 12px; color: var(--muted);
-  transition: all .3s;
-}
-.step.active { border-color: var(--accent); color: var(--accent2); }
-.step.done   { border-color: #1d4b2e; background: #0d2316; color: var(--green); }
-.step-dot {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: currentColor;
-}
-.step.active .step-dot { animation: pulse 1s ease-in-out infinite; }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
-#progress-msg { font-size: 12px; color: var(--muted); margin-top: 8px; }
+.seg-btn:hover{border-color:var(--b3);color:var(--t1);background:var(--bg-3)}
+.seg-btn.active{background:var(--a-bg);border-color:var(--a-bd);color:var(--accent2)}
 
-/* ── Results section ─────────────────────────────────────────────────────── */
-#results-section { display: none; }
+/* ══════════════════════════════════════════
+   DROP ZONE
+══════════════════════════════════════════ */
+.dropzone{
+  position:relative;border:1.5px dashed var(--b2);
+  border-radius:var(--r3);padding:36px 24px;text-align:center;
+  cursor:pointer;transition:border-color .2s,background .2s;
+}
+.dropzone:hover,.dropzone.drag-over{border-color:var(--accent);background:var(--a-bg)}
+.dropzone input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.dz-icon{
+  width:48px;height:48px;border-radius:var(--r2);
+  background:var(--bg-3);border:1px solid var(--b2);
+  display:flex;align-items:center;justify-content:center;margin:0 auto 12px;
+}
+.dz-title{font-size:13px;font-weight:600;color:var(--t1);margin-bottom:4px}
+.dz-sub{font-size:12px;color:var(--t3)}
+.dz-sub .link{color:var(--accent2);cursor:pointer}
+.drop-preview{display:none;position:relative;border-radius:var(--r2);overflow:hidden;border:1px solid var(--b2)}
+.drop-preview img{width:100%;display:block;max-height:200px;object-fit:cover}
+.remove-btn{
+  position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:50%;
+  background:rgba(0,0,0,.75);border:1px solid rgba(255,255,255,.1);
+  color:#fff;font-size:14px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .15s;
+}
+.remove-btn:hover{background:rgba(248,113,113,.4)}
 
-/* ── Score hero ──────────────────────────────────────────────────────────── */
-.score-hero {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 28px 32px;
-  display: flex;
-  align-items: center;
-  gap: 32px;
+/* ══════════════════════════════════════════
+   HINT BOX
+══════════════════════════════════════════ */
+.hint-box{
+  display:flex;align-items:flex-start;gap:8px;
+  background:var(--a-bg);border:1px solid var(--a-bd);
+  border-radius:var(--r2);padding:10px 12px;
+  font-size:12px;color:var(--t2);line-height:1.5;
 }
-.score-circle-wrap { flex-shrink: 0; }
-.score-circle {
-  width: 120px; height: 120px;
-  border-radius: 50%;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  border: 4px solid;
-  position: relative;
+.hint-box svg{flex-shrink:0;margin-top:1px;color:var(--accent2)}
+.hint-box code{font-family:var(--mono);font-size:11px;color:var(--accent2)}
+
+/* ══════════════════════════════════════════
+   SAMPLE STRIP
+══════════════════════════════════════════ */
+.sample-strip{
+  display:flex;gap:10px;overflow-x:auto;
+  padding-bottom:4px;scrollbar-width:thin;
+  -webkit-overflow-scrolling:touch;
 }
-.score-num {
-  font-size: 36px; font-weight: 800; line-height: 1;
+.sample-chip{
+  display:flex;align-items:stretch;
+  background:var(--bg-2);border:1px solid var(--b2);
+  border-radius:var(--r2);overflow:hidden;flex-shrink:0;
+  transition:border-color .15s,box-shadow .15s;
 }
-.score-denom {
-  font-size: 13px; color: var(--muted);
+.sample-chip:hover{border-color:var(--b3);box-shadow:var(--sh-sm)}
+.sample-chip-info{
+  padding:10px 14px;border-right:1px solid var(--b1);
+  display:flex;align-items:center;gap:10px;
 }
-.grade-badge {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 4px 12px; border-radius: 20px;
-  font-size: 12px; font-weight: 700;
-  margin-bottom: 8px;
+.chip-emoji{font-size:18px;line-height:1}
+.chip-text{}
+.chip-name{font-size:13px;font-weight:700;color:var(--t1);line-height:1.2}
+.chip-desc{font-size:11px;color:var(--t3);margin-top:3px}
+.chip-actions{display:flex}
+.chip-btn{
+  padding:0 12px;border:none;border-right:1px solid var(--b1);
+  background:transparent;font-size:11px;font-weight:600;
+  cursor:pointer;display:flex;align-items:center;gap:5px;
+  white-space:nowrap;transition:background .12s,color .12s;
+  color:var(--t3);font-family:var(--font);min-height:44px;
 }
-.score-title { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
-.score-sub   { font-size: 13px; color: var(--muted); max-width: 480px; line-height: 1.5; }
+.chip-btn:last-child{border-right:none}
+.chip-btn:hover{background:var(--bg-3);color:var(--t1)}
+.chip-btn .cdot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.chip-btn.ref  {color:#60A5FA}.chip-btn.ref  .cdot{background:#60A5FA}
+.chip-btn.good {color:#34D399}.chip-btn.good .cdot{background:#34D399}
+.chip-btn.bad  {color:#F87171}.chip-btn.bad  .cdot{background:#F87171}
+
+.quick-col{display:flex;flex-direction:column;justify-content:center;gap:4px;flex-shrink:0}
+.quick-btn{
+  padding:5px 11px;border-radius:var(--r1);font-size:11px;font-weight:700;
+  cursor:pointer;white-space:nowrap;border:1px solid transparent;
+  background:transparent;font-family:var(--font);transition:background .12s;
+}
+
+/* ══════════════════════════════════════════
+   INPUT PANELS
+══════════════════════════════════════════ */
+.panels-row{
+  display:grid;
+  grid-template-columns:1fr 56px 1fr;
+  gap:0;align-items:stretch;
+}
+.vs-col{display:flex;align-items:center;justify-content:center}
+.vs-badge{
+  width:34px;height:34px;border-radius:50%;
+  background:var(--bg-2);border:1px solid var(--b2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:800;color:var(--t3);letter-spacing:.05em;
+}
+
+/* ══════════════════════════════════════════
+   AUTH ACCORDION
+══════════════════════════════════════════ */
+.auth-accordion{
+  margin-top:12px;border:1px solid var(--b2);
+  border-radius:var(--r2);overflow:hidden;
+}
+.auth-toggle{
+  width:100%;display:flex;align-items:center;gap:7px;
+  background:var(--bg-2);border:none;cursor:pointer;
+  padding:10px 14px;font-size:12px;font-weight:600;
+  color:var(--t2);text-align:left;font-family:var(--font);
+  transition:background .15s,color .15s;
+}
+.auth-toggle:hover{background:var(--bg-3);color:var(--t1)}
+.auth-toggle.open{color:var(--accent2)}
+.auth-toggle.open .chevron{transform:rotate(180deg)}
+.chevron{margin-left:auto;transition:transform .2s;flex-shrink:0}
+.auth-badge{
+  margin-left:4px;padding:1px 8px;border-radius:var(--rFull);
+  font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;
+  background:var(--bg-1);border:1px solid var(--b2);color:var(--t3);
+}
+.auth-badge.active{background:var(--a-bg);border-color:var(--a-bd);color:var(--accent2)}
+.auth-body{
+  padding:14px;border-top:1px solid var(--b1);background:var(--bg);
+}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* ══════════════════════════════════════════
+   EVALUATE ROW
+══════════════════════════════════════════ */
+.eval-row{display:flex;align-items:center;justify-content:center;gap:12px;padding:4px 0}
+.vp-tag{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:4px 10px;border-radius:var(--rFull);font-size:11px;
+  background:var(--bg-2);border:1px solid var(--b2);color:var(--t2);
+}
+
+/* ══════════════════════════════════════════
+   ERROR
+══════════════════════════════════════════ */
+.error-box{
+  display:none;align-items:flex-start;gap:8px;
+  background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.25);
+  border-radius:var(--r2);padding:12px 16px;font-size:13px;color:#FCA5A5;
+}
+
+/* ══════════════════════════════════════════
+   PROGRESS
+══════════════════════════════════════════ */
+#progress-section{display:none}
+.prog-track{
+  height:3px;background:var(--b1);border-radius:var(--rFull);
+  overflow:hidden;margin-bottom:16px;
+}
+.prog-fill{
+  height:100%;
+  background:linear-gradient(90deg,var(--accent),#A855F7);
+  border-radius:var(--rFull);transition:width .4s ease;width:0%;
+  position:relative;
+}
+.prog-fill::after{
+  content:"";position:absolute;right:-1px;top:-2px;
+  width:7px;height:7px;border-radius:50%;background:#fff;
+  box-shadow:0 0 8px rgba(168,85,247,.9);
+}
+.prog-steps{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.step{
+  display:flex;align-items:center;gap:5px;
+  padding:4px 11px;border-radius:var(--rFull);
+  font-size:11px;font-weight:600;
+  color:var(--t3);background:var(--bg-2);border:1px solid var(--b1);
+  transition:all .3s;
+}
+.step.active{color:var(--accent2);border-color:var(--a-bd);background:var(--a-bg)}
+.step.done  {color:var(--green);border-color:rgba(52,211,153,.25);background:rgba(52,211,153,.08)}
+.step-dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+.step.active .step-dot{animation:blink 1s ease-in-out infinite}
+#progress-msg{font-size:12px;color:var(--t3);margin-top:10px;min-height:18px}
+
+/* ══════════════════════════════════════════
+   RESULTS
+══════════════════════════════════════════ */
+#results-section{display:none;flex-direction:column;gap:16px}
+
+/* Score hero */
+.score-hero{
+  display:flex;align-items:center;gap:32px;padding:28px 32px;
+  flex-wrap:wrap;
+}
+/* SVG ring */
+.ring-wrap{position:relative;width:128px;height:128px;flex-shrink:0}
+.ring-wrap svg{transform:rotate(-90deg)}
+.ring-bg{fill:none;stroke:var(--bg-3);stroke-width:9}
+.ring-fill{
+  fill:none;stroke-width:9;stroke-linecap:round;
+  stroke-dasharray:339.3; /* 2π×54 */
+  stroke-dashoffset:339.3;
+  transition:stroke-dashoffset 1s cubic-bezier(.4,0,.2,1),stroke .5s;
+}
+.ring-center{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+.ring-num{font-size:32px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.ring-denom{font-size:11px;color:var(--t3);margin-top:3px}
+
+.score-info{flex:1;min-width:200px}
+.grade-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:4px 12px;border-radius:var(--rFull);
+  font-size:12px;font-weight:700;letter-spacing:.02em;margin-bottom:8px;
+}
+.score-title{font-size:20px;font-weight:800;letter-spacing:-.02em;margin-bottom:5px}
+.score-sub{font-size:13px;color:var(--t2);line-height:1.6;max-width:480px}
 
 /* Metric cards */
-.metric-cards {
-  flex: 1;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
+.metric-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:10px;
+  flex-shrink:0;width:380px;
 }
-.metric-card {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 14px;
-  text-align: center;
+.metric-card{
+  background:var(--bg-2);border:1px solid var(--b2);
+  border-radius:var(--r2);padding:14px;text-align:center;
 }
-.mc-val  { font-size: 22px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
-.mc-lbl  { font-size: 11px; color: var(--muted); line-height: 1.4; }
-.mc-sub  { font-size: 10px; color: #475569; display: block; }
+.mc-val{font-size:20px;font-weight:800;letter-spacing:-.02em;line-height:1;margin-bottom:5px}
+.mc-lbl{font-size:11px;color:var(--t3);line-height:1.3}
+.mc-sub{font-size:10px;color:var(--t3);opacity:.7;display:block;margin-top:2px}
 
-/* ── Screenshots comparison ───────────────────────────────────────────────── */
-.compare-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+/* Compare */
+.compare-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.compare-panel{
+  background:var(--bg-1);border:1px solid var(--b1);
+  border-radius:var(--r3);overflow:hidden;display:flex;flex-direction:column;
 }
-.compare-panel {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
+.compare-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 16px;border-bottom:1px solid var(--b1);
+  background:var(--bg-2);
 }
-.compare-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface2);
-}
-.compare-label {
-  font-size: 11px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.8px; color: var(--muted);
-}
-.compare-panel img {
-  width: 100%; display: block;
-  max-height: 500px; object-fit: contain;
-  background: #0a0a0a;
-}
+.compare-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--t3)}
+.compare-sub{font-size:11px;color:var(--t3)}
+.compare-img-box{flex:1;background:#040609}
+.compare-img-box img{width:100%;display:block;max-height:520px;object-fit:contain}
 
-/* ── VLM dimension bars ───────────────────────────────────────────────────── */
-.dim-section {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 22px 24px;
+/* Diff slider */
+.diff-slider-wrap{
+  position:relative;user-select:none;cursor:col-resize;
+  overflow:hidden;flex:1;background:#040609;
 }
-.dim-section-title {
-  font-size: 13px; font-weight: 700; color: var(--muted);
-  text-transform: uppercase; letter-spacing: 0.8px;
-  margin-bottom: 18px;
-  display: flex; align-items: center; gap: 8px;
+.diff-img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.diff-img-impl{position:relative;z-index:1;display:block;width:100%;max-height:520px;object-fit:contain}
+.diff-img-ref{
+  position:absolute;inset:0;z-index:2;
+  width:100%;object-fit:contain;
+  clip-path:inset(0 50% 0 0);
 }
-.dim-section-title::after {
-  content: ""; flex: 1; height: 1px; background: var(--border);
+.diff-handle{
+  position:absolute;top:0;left:50%;z-index:3;
+  width:2px;background:rgba(255,255,255,.9);height:100%;
+  transform:translateX(-50%);pointer-events:none;
+  box-shadow:0 0 10px rgba(0,0,0,.5);
 }
-.dim-row {
-  display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
-}
-.dim-row:last-child { margin-bottom: 0; }
-.dim-name { width: 170px; font-size: 13px; color: var(--text); flex-shrink: 0; }
-.dim-bar-bg {
-  flex: 1; height: 10px; background: var(--surface2);
-  border-radius: 5px; overflow: hidden;
-}
-.dim-bar-fill {
-  height: 100%; border-radius: 5px;
-  transition: width .6s ease;
-}
-.dim-score { width: 46px; text-align: right; font-size: 13px; font-weight: 700; }
-
-/* Summary blockquote */
-.summary-box {
-  background: rgba(99,102,241,.06);
-  border: 1px solid rgba(99,102,241,.2);
-  border-left: 3px solid var(--accent);
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-  padding: 14px 18px;
-  font-size: 13px; color: #94a3b8; line-height: 1.6;
-  font-style: italic;
-  margin-top: 16px;
+.diff-handle::before{
+  content:"";position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  width:28px;height:28px;border-radius:50%;
+  background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.5);
 }
 
-/* ── Error box ────────────────────────────────────────────────────────────── */
-.error-box {
-  background: rgba(239,68,68,.08);
-  border: 1px solid rgba(239,68,68,.3);
-  border-radius: var(--radius-sm);
-  padding: 14px 18px;
-  font-size: 13px; color: #fca5a5;
-  display: none;
+/* Rubric */
+.rubric-section{background:var(--bg-1);border:1px solid var(--b1);border-radius:var(--r3);padding:22px 24px}
+.rubric-head{
+  font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);
+  margin-bottom:18px;display:flex;align-items:center;gap:10px;
+}
+.rubric-head::after{content:"";flex:1;height:1px;background:var(--b1)}
+.dim-row{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.dim-row:last-child{margin-bottom:0}
+.dim-name{width:175px;font-size:13px;color:var(--t1);flex-shrink:0}
+.dim-track{flex:1;height:8px;background:var(--bg-3);border-radius:var(--rFull);overflow:hidden}
+.dim-bar-fill{height:100%;border-radius:var(--rFull);transition:width .7s cubic-bezier(.4,0,.2,1);width:0%}
+.dim-score{width:50px;text-align:right;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
+.summary-box{
+  background:var(--a-bg);border:1px solid var(--a-bd);
+  border-left:3px solid var(--accent);
+  border-radius:0 var(--r2) var(--r2) 0;
+  padding:12px 16px;font-size:13px;color:var(--t2);line-height:1.6;
+  font-style:italic;margin-top:16px;
 }
 
-/* ── Diff overlay slider ─────────────────────────────────────────────────── */
-.diff-slider-wrap {
-  position: relative;
-  user-select: none;
-  cursor: col-resize;
-  overflow: hidden;
-  border-radius: 0 0 var(--radius) var(--radius);
+/* Platform frames */
+.phone-frame-wrap{display:none;justify-content:center;padding:16px 0}
+.phone-frame-wrap.visible{display:flex}
+.phone-frame{
+  position:relative;border:3px solid #2D3748;border-radius:34px;overflow:hidden;
+  box-shadow:0 0 0 6px #1A202C,var(--sh-lg);max-width:390px;width:100%;background:#000;
 }
-.diff-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
-.diff-img-impl { position: relative; z-index: 1; }
-.diff-img-ref  {
-  position: absolute; inset: 0; z-index: 2;
-  width: 100%; object-fit: contain;
-  clip-path: inset(0 50% 0 0);
-  transition: none;
+.phone-notch{
+  position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:100px;height:22px;background:#2D3748;border-radius:0 0 14px 14px;z-index:10;
 }
-.diff-handle {
-  position: absolute; top: 0; left: 50%; z-index: 3;
-  width: 2px; background: #fff;
-  height: 100%;
-  transform: translateX(-50%);
-  pointer-events: none;
-}
-.diff-handle::before {
-  content: "";
-  position: absolute; top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  width: 28px; height: 28px; border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 2px 8px rgba(0,0,0,.4);
-}
+.phone-frame img{display:block;width:100%}
 
-/* ── Auth accordion ──────────────────────────────────────────────────────── */
-.auth-accordion {
-  margin-top: 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
+.win-frame-wrap{display:none;flex-direction:column;align-items:center;padding:16px 0}
+.win-frame-wrap.visible{display:flex}
+.win-frame{
+  border:1px solid var(--b2);border-radius:9px 9px 4px 4px;overflow:hidden;
+  box-shadow:var(--sh-lg);width:100%;
 }
-.auth-toggle {
-  width: 100%; display: flex; align-items: center; gap: 8px;
-  background: var(--surface2); border: none; cursor: pointer;
-  padding: 10px 14px; font-size: 12px; font-weight: 600;
-  color: var(--muted); text-align: left;
-  transition: background .15s, color .15s;
+.win-titlebar{
+  height:32px;background:#1C2128;display:flex;align-items:center;
+  padding:0 12px;gap:8px;flex-shrink:0;border-bottom:1px solid var(--b1);
 }
-.auth-toggle:hover { background: #252f42; color: var(--text); }
-.auth-toggle.open  { color: var(--accent2); }
-.auth-toggle.open .chevron { transform: rotate(180deg); }
-.chevron { margin-left: auto; transition: transform .2s; flex-shrink: 0; }
-.auth-badge {
-  margin-left: 4px; padding: 1px 8px; border-radius: 10px;
-  font-size: 10px; font-weight: 700; text-transform: uppercase;
-  background: var(--surface); border: 1px solid var(--border); color: var(--muted);
+.win-app-icon{width:14px;height:14px;opacity:.8;flex-shrink:0}
+.win-title{font-size:12px;color:rgba(255,255,255,.8);flex:1;font-weight:400}
+.win-controls{display:flex;margin-right:-12px}
+.win-btn{
+  width:46px;height:32px;display:flex;align-items:center;justify-content:center;
+  color:rgba(255,255,255,.55);font-size:10px;cursor:default;transition:background .1s;
 }
-.auth-badge.active { background: rgba(99,102,241,.15); border-color: var(--accent); color: var(--accent2); }
-.auth-body { padding: 14px; border-top: 1px solid var(--border); background: var(--bg); }
-.auth-type-row {
-  display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap;
-}
-.auth-type-btn {
-  padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;
-  border: 1px solid var(--border); background: var(--surface2);
-  color: var(--muted); cursor: pointer;
-  display: flex; align-items: center; gap: 5px;
-  transition: all .15s;
-}
-.auth-type-btn:hover { border-color: var(--border2); color: var(--text); }
-.auth-type-btn.active { background: rgba(99,102,241,.15); border-color: var(--accent); color: var(--accent2); }
-.auth-fields { display: flex; flex-direction: column; gap: 10px; animation: fadeIn .15s; }
-@keyframes fadeIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
-.auth-field-row { display: flex; flex-direction: column; gap: 6px; }
-.auth-field-row.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.auth-hint {
-  display: flex; align-items: flex-start; gap: 7px;
-  background: rgba(99,102,241,.06); border: 1px solid rgba(99,102,241,.2);
-  border-radius: 6px; padding: 8px 10px;
-  font-size: 11px; color: var(--muted); line-height: 1.5;
-}
-.auth-hint svg { flex-shrink:0; margin-top:1px; color: var(--accent); }
+.win-btn:hover{background:rgba(255,255,255,.08);color:rgba(255,255,255,.85)}
+.win-btn.close:hover{background:#C42B1C;color:#fff}
+.win-frame img{display:block;width:100%}
 
-/* ── Samples strip ───────────────────────────────────────────────────────── */
-.samples-strip {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 18px 22px;
+/* Footer */
+.footer{
+  border-top:1px solid var(--b1);padding:12px 32px;
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:11px;color:var(--t3);flex-shrink:0;
 }
-.samples-header {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 14px;
-}
-.samples-title {
-  font-size: 12px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 1px; color: var(--muted);
-  display: flex; align-items: center; gap: 8px;
-}
-.samples-title::before {
-  content: ""; display: inline-block;
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 6px var(--accent);
-}
-.samples-hint { font-size: 11px; color: #3a4560; }
-.sample-cards { display: flex; gap: 12px; flex-wrap: wrap; }
-
-.sample-card {
-  display: flex; align-items: center; gap: 0;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow: hidden;
-  transition: border-color .15s;
-}
-.sample-card:hover { border-color: var(--border2); }
-.sample-info {
-  padding: 12px 14px;
-  border-right: 1px solid var(--border);
-}
-.sample-emoji { font-size: 18px; display: block; margin-bottom: 4px; }
-.sample-name  { font-size: 13px; font-weight: 700; color: var(--text); }
-.sample-desc  { font-size: 11px; color: var(--muted); margin-top: 2px; }
-.sample-variants {
-  display: flex; flex-direction: column;
-}
-.variant-btn {
-  padding: 8px 14px;
-  background: transparent;
-  border: none; border-bottom: 1px solid var(--border);
-  font-size: 11px; font-weight: 600;
-  cursor: pointer;
-  display: flex; align-items: center; gap: 6px;
-  transition: background .12s, color .12s;
-  white-space: nowrap;
-  text-align: left;
-}
-.variant-btn:last-child { border-bottom: none; }
-.variant-btn:hover { background: rgba(99,102,241,.08); }
-.variant-btn .vdot {
-  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
-}
-.variant-btn.ref   { color: #60a5fa; }
-.variant-btn.close { color: #4ade80; }
-.variant-btn.bad   { color: #f87171; }
-.variant-btn.ref   .vdot { background: #60a5fa; }
-.variant-btn.close .vdot { background: #4ade80; }
-.variant-btn.bad   .vdot { background: #f87171; }
-
-/* ── Platform toggle ─────────────────────────────────────────────────────── */
-.platform-row {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 22px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-}
-.platform-label {
-  font-size: 11px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.8px; color: var(--muted); margin-right: 4px;
-}
-.platform-btn {
-  display: flex; align-items: center; gap: 6px;
-  padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600;
-  border: 1px solid var(--border); background: var(--surface2);
-  color: var(--muted); cursor: pointer;
-  transition: all .15s;
-}
-.platform-btn:hover { border-color: var(--border2); color: var(--text); }
-.platform-btn.active { background: rgba(99,102,241,.15); border-color: var(--accent); color: var(--accent2); }
-.platform-viewport-hint { margin-left: auto; font-size: 11px; color: var(--muted); }
-
-/* ── Windows app frame ───────────────────────────────────────────────────── */
-.win-frame-wrap {
-  display: none; flex-direction: column;
-  align-items: center; padding: 16px 0;
-}
-.win-frame-wrap.visible { display: flex; }
-.win-frame {
-  border: 1px solid #3a4560;
-  border-radius: 8px 8px 4px 4px;
-  overflow: hidden;
-  box-shadow: 0 8px 32px rgba(0,0,0,.5);
-  width: 100%;
-  max-width: 900px;
-}
-.win-titlebar {
-  height: 32px;
-  background: #202020;
-  display: flex; align-items: center;
-  padding: 0 12px; gap: 8px;
-  flex-shrink: 0;
-}
-.win-app-icon { width: 14px; height: 14px; opacity: .8; flex-shrink: 0; }
-.win-title { font-size: 12px; color: rgba(255,255,255,.85); flex: 1; }
-.win-controls { display: flex; margin-right: -12px; }
-.win-btn {
-  width: 46px; height: 32px;
-  display: flex; align-items: center; justify-content: center;
-  cursor: default; color: rgba(255,255,255,.7); font-size: 10px;
-  transition: background .1s;
-}
-.win-btn:hover { background: rgba(255,255,255,.1); }
-.win-btn.close:hover { background: #c42b1c; color: #fff; }
-.win-frame img { display: block; width: 100%; }
-
-/* ── Phone frame ─────────────────────────────────────────────────────────── */
-.phone-frame-wrap {
-  display: none;
-  justify-content: center;
-  padding: 16px 0;
-}
-.phone-frame-wrap.visible { display: flex; }
-.phone-frame {
-  position: relative;
-  border: 3px solid #334155;
-  border-radius: 32px;
-  overflow: hidden;
-  box-shadow: 0 0 0 6px #1e293b, 0 20px 40px rgba(0,0,0,.5);
-  background: #000;
-  max-width: 390px;
-  width: 100%;
-}
-.phone-notch {
-  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
-  width: 100px; height: 22px; background: #334155; border-radius: 0 0 14px 14px;
-  z-index: 10;
-}
-.phone-frame img { display: block; width: 100%; }
-
-/* ── Footer ──────────────────────────────────────────────────────────────── */
-footer {
-  border-top: 1px solid var(--border);
-  padding: 12px 28px;
-  display: flex; align-items: center; justify-content: center;
-  gap: 6px;
-  font-size: 11px; color: var(--muted);
-  flex-shrink: 0;
-}
-footer span { color: #475569; }
+.footer-right{display:flex;gap:16px;align-items:center}
 </style>
 </head>
 <body>
 
-<!-- ── Header ────────────────────────────────────────────────────────────── -->
-<header>
-  <div class="logo">
-    <div class="logo-icon">
-      <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
+<!-- ══════════ HEADER ══════════ -->
+<header class="header">
+  <div class="header-left">
+    <div class="logo-mark">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24">
         <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
-              stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </div>
-    <div>
-      <div class="logo-name">Design Fidelity Playground</div>
+    <div class="logo-text">
+      <div class="logo-name">Design Fidelity</div>
       <div class="logo-tag">Design → Code evaluation engine</div>
     </div>
+
+    <div class="h-sep"></div>
+
+    <!-- Platform toggle -->
+    <div class="plat-group" role="group" aria-label="Platform">
+      <button class="plat-pill active" data-platform="desktop" onclick="setPlatform('desktop',this)">
+        <svg width="11" height="11" fill="none" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 21h8M12 17v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Desktop
+      </button>
+      <button class="plat-pill" data-platform="android_phone" onclick="setPlatform('android_phone',this)">
+        <svg width="11" height="11" fill="none" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="3" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="18" r="1" fill="currentColor"/></svg>
+        Android
+      </button>
+      <button class="plat-pill" data-platform="android_tablet" onclick="setPlatform('android_tablet',this)">
+        <svg width="11" height="11" fill="none" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="18" rx="3" stroke="currentColor" stroke-width="2"/><circle cx="19" cy="12" r="1" fill="currentColor"/></svg>
+        Tablet
+      </button>
+      <button class="plat-pill" data-platform="windows_hd" onclick="setPlatform('windows_hd',this)">
+        <svg width="11" height="11" fill="none" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="M2 7h20" stroke="currentColor" stroke-width="1.5"/></svg>
+        Win HD
+      </button>
+      <button class="plat-pill" data-platform="windows_fhd" onclick="setPlatform('windows_fhd',this)">
+        <svg width="11" height="11" fill="none" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="M2 7h20" stroke="currentColor" stroke-width="1.5"/></svg>
+        Win FHD
+      </button>
+    </div>
   </div>
-  <div class="header-meta">
-    <div class="model-badge">
-      <div class="dot"></div>
-      VLM: gpt-4o &nbsp;·&nbsp; SSIM + Pixel metrics
+
+  <div class="header-right">
+    <div class="status-chip">
+      <div class="live-dot"></div>
+      VLM&nbsp;·&nbsp;gpt-4o &nbsp;·&nbsp; SSIM + Pixel
     </div>
   </div>
 </header>
 
-<!-- ── Main ──────────────────────────────────────────────────────────────── -->
-<div class="main">
+<!-- ══════════ PAGE ══════════ -->
+<div class="page">
 
-  <!-- ── Sample Library ──────────────────────────────────────────────── -->
-  <div class="samples-strip">
-    <div class="samples-header">
-      <div class="samples-title">Sample Library — click any variant to load instantly</div>
-      <div class="samples-hint">Blue = reference design &nbsp;·&nbsp; Green = close impl &nbsp;·&nbsp; Red = degraded impl</div>
+  <!-- Sample Library -->
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <div class="card-eyebrow">Quick Start</div>
+        <div class="card-title">Sample Library</div>
+      </div>
+      <span style="font-size:11px;color:var(--t3)">
+        <span style="color:#60A5FA">●</span> Reference &nbsp;
+        <span style="color:#34D399">●</span> Close &nbsp;
+        <span style="color:#F87171">●</span> Degraded
+      </span>
     </div>
-    <div class="sample-cards" id="sample-cards">
-      <div style="font-size:12px;color:var(--muted);padding:8px 0;">Loading samples…</div>
+    <div class="card-body" style="padding:14px 20px">
+      <div class="sample-strip" id="sample-cards">
+        <div style="font-size:12px;color:var(--t3);padding:8px 0;">Loading samples…</div>
+      </div>
     </div>
-  </div>
-
-  <!-- Platform toggle -->
-  <div class="platform-row">
-    <span class="platform-label">Platform</span>
-    <button class="platform-btn active" data-platform="desktop" onclick="setPlatform('desktop',this)">
-      <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 21h8M12 17v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-      Desktop
-    </button>
-    <button class="platform-btn" data-platform="android_phone" onclick="setPlatform('android_phone',this)">
-      <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="3" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="18" r="1" fill="currentColor"/></svg>
-      Android Phone
-    </button>
-    <button class="platform-btn" data-platform="android_tablet" onclick="setPlatform('android_tablet',this)">
-      <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="18" rx="3" stroke="currentColor" stroke-width="2"/><circle cx="19" cy="12" r="1" fill="currentColor"/></svg>
-      Android Tablet
-    </button>
-    <button class="platform-btn" data-platform="windows_hd" onclick="setPlatform('windows_hd',this)">
-      <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="M2 7h20M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-      Windows HD
-    </button>
-    <button class="platform-btn" data-platform="windows_fhd" onclick="setPlatform('windows_fhd',this)">
-      <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="M2 7h20M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-      Windows FHD
-    </button>
-    <span class="platform-viewport-hint" id="viewport-hint">1280 × 900 px &nbsp;·&nbsp; Desktop rubric</span>
   </div>
 
   <!-- Input panels -->
-  <div class="input-row">
+  <div class="panels-row">
 
     <!-- Reference panel -->
-    <div class="panel" id="panel-ref">
-      <div class="panel-header">
-        <div class="panel-label">Step 1</div>
-        <div class="panel-title">Reference Design</div>
-        <div class="tabs">
-          <div class="tab active" data-panel="ref" data-tab="upload">Upload Image</div>
+    <div class="card" id="panel-ref">
+      <div class="card-head">
+        <div class="card-title-group">
+          <div class="card-eyebrow">Step 1</div>
+          <div class="card-title">Reference Design</div>
+        </div>
+        <div class="tab-bar">
+          <div class="tab active" data-panel="ref" data-tab="upload">Upload</div>
           <div class="tab"        data-panel="ref" data-tab="figma">Figma URL</div>
-          <div class="tab"        data-panel="ref" data-tab="html">HTML Paste</div>
+          <div class="tab"        data-panel="ref" data-tab="html">HTML</div>
         </div>
       </div>
-      <div class="panel-body">
+      <div class="card-body" style="display:flex;flex-direction:column;gap:12px;">
 
-        <!-- Upload tab -->
+        <!-- Upload -->
         <div class="tab-pane active" id="ref-upload">
-          <div class="drop-zone" id="drop-zone"
+          <div class="dropzone" id="drop-zone"
                ondragover="dragOver(event,'drop-zone')" ondragleave="dragLeave(event,'drop-zone')" ondrop="dropFile(event)">
             <input type="file" id="ref-file-input" accept="image/*" onchange="fileSelected(event)"/>
-            <div class="drop-icon">
-              <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
+            <div class="dz-icon">
+              <svg width="22" height="22" fill="none" viewBox="0 0 24 24">
                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"
-                      stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      stroke="var(--accent2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
-            <div class="drop-title">Drop your design here</div>
-            <div class="drop-sub">PNG, JPG, WebP &nbsp;·&nbsp; <span>browse files</span></div>
+            <div class="dz-title">Drop your design here</div>
+            <div class="dz-sub">PNG, JPG, WebP &nbsp;·&nbsp; <span class="link">browse files</span></div>
           </div>
           <div class="drop-preview" id="ref-preview">
             <img id="ref-preview-img" src="" alt=""/>
             <button class="remove-btn" onclick="clearRef()">×</button>
           </div>
-          <div class="figma-hint">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="10" stroke="#6366f1" stroke-width="2"/>
-              <path d="M12 8v4m0 4h.01" stroke="#6366f1" stroke-width="2" stroke-linecap="round"/>
+          <div class="hint-box">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+              <path d="M12 8v4m0 4h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
             Export your Figma frame as PNG (File → Export) and upload here, or switch to the Figma URL tab.
           </div>
         </div>
 
-        <!-- Figma tab -->
+        <!-- Figma -->
         <div class="tab-pane" id="ref-figma">
-          <label class="field-label" for="ref-figma-url">Figma File / Frame URL</label>
-          <input type="url" id="ref-figma-url"
-                 placeholder="https://www.figma.com/design/FILE_KEY/…?node-id=X-Y"/>
-          <label class="field-label" for="ref-figma-token" style="margin-top:10px;">
-            Personal Access Token
-            <span style="font-weight:400;color:var(--muted);">(required for private files)</span>
-          </label>
-          <input type="text" id="ref-figma-token"
-                 placeholder="figd_xxxxxxxxxxxx…"
-                 style="font-family:'SF Mono','Fira Code',monospace;font-size:12px;letter-spacing:0.3px;"/>
-          <div class="figma-hint" style="margin-top:8px;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="10" stroke="#6366f1" stroke-width="2"/>
-              <path d="M12 8v4m0 4h.01" stroke="#6366f1" stroke-width="2" stroke-linecap="round"/>
+          <div class="field">
+            <label class="field-label" for="ref-figma-url">Figma File / Frame URL</label>
+            <input type="url" id="ref-figma-url"
+                   placeholder="https://www.figma.com/design/FILE_KEY/…?node-id=X-Y"/>
+          </div>
+          <div class="field" style="margin-top:10px;">
+            <label class="field-label" for="ref-figma-token">
+              Personal Access Token <span class="dim">(required for private files)</span>
+            </label>
+            <input type="text" id="ref-figma-token"
+                   placeholder="figd_xxxxxxxxxxxx…"
+                   style="font-family:var(--mono);font-size:12px;letter-spacing:.3px;"/>
+          </div>
+          <div class="hint-box" style="margin-top:10px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+              <path d="M12 8v4m0 4h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
-            Get a PAT from Figma → Account settings → Personal access tokens.
-            With a token the server calls the Figma Export REST API and downloads the frame as PNG.
-            Without a token Playwright attempts to screenshot the URL directly (public files only).
+            Figma → Account settings → Personal access tokens. With a PAT the server calls the Figma Export REST API directly.
           </div>
         </div>
 
-        <!-- HTML tab -->
+        <!-- HTML -->
         <div class="tab-pane" id="ref-html">
-          <label class="field-label" for="ref-html-input">Paste reference HTML</label>
-          <textarea id="ref-html-input" placeholder="<!DOCTYPE html>&#10;<html>…"></textarea>
+          <div class="field">
+            <label class="field-label" for="ref-html-input">Paste reference HTML</label>
+            <textarea id="ref-html-input" placeholder="<!DOCTYPE html>&#10;<html>…"></textarea>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- VS divider -->
-    <div class="vs-divider">
+    <!-- VS -->
+    <div class="vs-col">
       <div class="vs-badge">VS</div>
     </div>
 
     <!-- Implementation panel -->
-    <div class="panel" id="panel-impl">
-      <div class="panel-header">
-        <div class="panel-label">Step 2</div>
-        <div class="panel-title">Your Implementation</div>
-        <div class="tabs">
+    <div class="card" id="panel-impl">
+      <div class="card-head">
+        <div>
+          <div class="card-eyebrow">Step 2</div>
+          <div class="card-title">Your Implementation</div>
+        </div>
+        <div class="tab-bar">
           <div class="tab active" data-panel="impl" data-tab="url">Live URL</div>
-          <div class="tab"        data-panel="impl" data-tab="html">HTML Paste</div>
+          <div class="tab"        data-panel="impl" data-tab="html">HTML</div>
           <div class="tab"        data-panel="impl" data-tab="android"  id="tab-android"  style="display:none;">Android</div>
           <div class="tab"        data-panel="impl" data-tab="windows"  id="tab-windows"  style="display:none;">Windows</div>
         </div>
       </div>
-      <div class="panel-body">
+      <div class="card-body" style="display:flex;flex-direction:column;gap:12px;">
 
-        <!-- URL tab -->
+        <!-- URL -->
         <div class="tab-pane active" id="impl-url">
-          <label class="field-label" for="impl-url-input">Web page URL</label>
-          <input type="url" id="impl-url-input"
-                 placeholder="https://your-app.com/login"/>
+          <div class="field">
+            <label class="field-label" for="impl-url-input">Web page URL</label>
+            <input type="url" id="impl-url-input" placeholder="https://your-app.com/login"/>
+          </div>
 
-          <!-- Auth config accordion -->
+          <!-- Auth accordion -->
           <div class="auth-accordion">
             <button class="auth-toggle" onclick="toggleAuth(this)" type="button">
               <svg width="12" height="12" fill="none" viewBox="0 0 24 24">
@@ -866,212 +788,205 @@ footer span { color: #475569; }
               </svg>
             </button>
             <div class="auth-body" id="auth-body" style="display:none;">
-
-              <!-- Auth type selector -->
-              <div class="auth-type-row">
-                <button class="auth-type-btn active" data-type="none"    onclick="setAuthType('none',this)">None</button>
-                <button class="auth-type-btn"         data-type="form"    onclick="setAuthType('form',this)">
-                  <svg width="11" height="11" fill="none" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="M3 10h18" stroke="currentColor" stroke-width="2"/></svg>
+              <div class="seg-row">
+                <button class="seg-btn active" data-type="none"    onclick="setAuthType('none',this)">None</button>
+                <button class="seg-btn"         data-type="form"    onclick="setAuthType('form',this)">
+                  <svg width="10" height="10" fill="none" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="M3 10h18" stroke="currentColor" stroke-width="2"/></svg>
                   Form Agent
                 </button>
-                <button class="auth-type-btn"         data-type="cookies" onclick="setAuthType('cookies',this)">
-                  <svg width="11" height="11" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="10" r="1" fill="currentColor"/><circle cx="14" cy="14" r="1" fill="currentColor"/></svg>
+                <button class="seg-btn"         data-type="cookies" onclick="setAuthType('cookies',this)">
+                  <svg width="10" height="10" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="10" r="1" fill="currentColor"/><circle cx="14" cy="14" r="1" fill="currentColor"/></svg>
                   Cookies
                 </button>
-                <button class="auth-type-btn"         data-type="basic"   onclick="setAuthType('basic',this)">
-                  <svg width="11" height="11" fill="none" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                <button class="seg-btn"         data-type="basic"   onclick="setAuthType('basic',this)">
+                  <svg width="10" height="10" fill="none" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                   Basic
                 </button>
               </div>
 
-              <!-- Form auth fields -->
-              <div class="auth-fields" id="auth-fields-form" style="display:none;">
-                <div class="auth-field-row">
-                  <div>
-                    <label class="field-label">Login URL <span style="font-weight:400;color:var(--muted)">(if different)</span></label>
-                    <input type="url" id="auth-login-url" placeholder="https://app.com/login (leave blank = same URL)"/>
-                  </div>
+              <div id="auth-fields-form" style="display:none;flex-direction:column;gap:10px;">
+                <div class="field">
+                  <label class="field-label">Login URL <span class="dim">(if different from above)</span></label>
+                  <input type="url" id="auth-login-url" placeholder="https://app.com/login"/>
                 </div>
-                <div class="auth-field-row two-col">
-                  <div>
+                <div class="two-col">
+                  <div class="field">
                     <label class="field-label">Username / Email</label>
                     <input type="text" id="auth-form-user" placeholder="user@company.com" autocomplete="off"/>
                   </div>
-                  <div>
+                  <div class="field">
                     <label class="field-label">Password</label>
                     <input type="password" id="auth-form-pass" placeholder="••••••••" autocomplete="off"/>
                   </div>
                 </div>
-                <div>
-                  <label class="field-label">Target URL after login <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+                <div class="field">
+                  <label class="field-label">Target URL after login <span class="dim">(optional)</span></label>
                   <input type="url" id="auth-target-url" placeholder="https://app.com/dashboard"/>
                 </div>
-                <div class="auth-hint">
-                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                  The VLM agent will screenshot the login page, identify the form fields, fill credentials, and submit.
+                <div class="hint-box">
+                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  The VLM agent screenshots the login page, detects the form fields, fills credentials, and submits.
                 </div>
               </div>
 
-              <!-- Cookie fields -->
-              <div class="auth-fields" id="auth-fields-cookies" style="display:none;">
-                <label class="field-label">Cookie string</label>
-                <textarea id="auth-cookies" rows="3"
-                          placeholder="session=abc123; user_id=42; csrf_token=xyz"
-                          style="font-family:'SF Mono','Fira Code',monospace;font-size:12px;"></textarea>
-                <div>
-                  <label class="field-label" style="margin-top:8px;">Target URL <span style="font-weight:400;color:var(--muted)">(page to visit after injecting cookies)</span></label>
+              <div id="auth-fields-cookies" style="display:none;flex-direction:column;gap:10px;">
+                <div class="field">
+                  <label class="field-label">Cookie string</label>
+                  <textarea id="auth-cookies" rows="3"
+                            placeholder="session=abc123; user_id=42; csrf_token=xyz"
+                            style="min-height:72px;"></textarea>
+                </div>
+                <div class="field">
+                  <label class="field-label">Target URL <span class="dim">(page to visit after injecting cookies)</span></label>
                   <input type="url" id="auth-cookie-target" placeholder="https://app.com/dashboard"/>
                 </div>
-                <div class="auth-hint">
-                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                  Cookies are injected into the browser context before navigating. Copy from DevTools → Application → Cookies.
+                <div class="hint-box">
+                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  Copy from DevTools → Application → Cookies. Injected before navigation.
                 </div>
               </div>
 
-              <!-- Basic auth fields -->
-              <div class="auth-fields" id="auth-fields-basic" style="display:none;">
-                <div class="auth-field-row two-col">
-                  <div>
+              <div id="auth-fields-basic" style="display:none;flex-direction:column;gap:10px;">
+                <div class="two-col">
+                  <div class="field">
                     <label class="field-label">Username</label>
                     <input type="text" id="auth-basic-user" placeholder="admin" autocomplete="off"/>
                   </div>
-                  <div>
+                  <div class="field">
                     <label class="field-label">Password</label>
                     <input type="password" id="auth-basic-pass" placeholder="••••••••" autocomplete="off"/>
                   </div>
                 </div>
-                <div class="auth-hint">
-                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                  HTTP Basic Auth — sent as Authorization: Basic header on every request.
+                <div class="hint-box">
+                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                  HTTP Basic Auth — Authorization: Basic header sent on every request.
                 </div>
               </div>
-
             </div>
           </div>
         </div>
 
-        <!-- HTML tab -->
+        <!-- HTML paste -->
         <div class="tab-pane" id="impl-html">
-          <label class="field-label" for="impl-html-input">Paste implementation HTML</label>
-          <textarea id="impl-html-input" placeholder="<!DOCTYPE html>&#10;<html>…"></textarea>
+          <div class="field">
+            <label class="field-label" for="impl-html-input">Paste implementation HTML</label>
+            <textarea id="impl-html-input" placeholder="<!DOCTYPE html>&#10;<html>…"></textarea>
+          </div>
         </div>
 
-        <!-- Android tab -->
+        <!-- Android -->
         <div class="tab-pane" id="impl-android">
-          <!-- Sub-mode selector -->
-          <div class="auth-type-row" style="margin-bottom:14px;">
-            <button class="auth-type-btn active" data-atype="upload"  onclick="setAndroidMode('upload',this)">
-              <svg width="11" height="11" fill="none" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div class="seg-row">
+            <button class="seg-btn active" data-atype="upload"     onclick="setAndroidMode('upload',this)">
+              <svg width="10" height="10" fill="none" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
               Upload Screenshot
             </button>
-            <button class="auth-type-btn" data-atype="adb" onclick="setAndroidMode('adb',this)">
-              <svg width="11" height="11" fill="none" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="3" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="18" r="1" fill="currentColor"/></svg>
+            <button class="seg-btn" data-atype="adb"          onclick="setAndroidMode('adb',this)">
+              <svg width="10" height="10" fill="none" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="3" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="18" r="1" fill="currentColor"/></svg>
               ADB Device
             </button>
-            <button class="auth-type-btn" data-atype="mobile_url" onclick="setAndroidMode('mobile_url',this)">
-              <svg width="11" height="11" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 8v4l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            <button class="seg-btn" data-atype="mobile_url"   onclick="setAndroidMode('mobile_url',this)">
+              <svg width="10" height="10" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M2 12h20" stroke="currentColor" stroke-width="2"/><path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20" stroke="currentColor" stroke-width="2"/></svg>
               Mobile URL
             </button>
           </div>
 
-          <!-- Upload sub-pane -->
           <div id="android-upload-pane">
-            <div class="drop-zone" id="android-drop-zone"
+            <div class="dropzone" id="android-drop-zone"
                  ondragover="dragOver(event,'android-drop-zone')" ondragleave="dragLeave(event,'android-drop-zone')" ondrop="dropAndroid(event)">
               <input type="file" id="android-file-input" accept="image/*" onchange="androidFileSelected(event)"/>
-              <div class="drop-icon">
-                <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
-                  <rect x="5" y="2" width="14" height="20" rx="3" stroke="#6366f1" stroke-width="2"/>
-                  <circle cx="12" cy="18" r="1" fill="#6366f1"/>
+              <div class="dz-icon">
+                <svg width="22" height="22" fill="none" viewBox="0 0 24 24">
+                  <rect x="5" y="2" width="14" height="20" rx="3" stroke="var(--accent2)" stroke-width="2"/>
+                  <circle cx="12" cy="18" r="1" fill="var(--accent2)"/>
                 </svg>
               </div>
-              <div class="drop-title">Drop Android screenshot</div>
-              <div class="drop-sub">PNG, JPG &nbsp;·&nbsp; <span>browse files</span></div>
+              <div class="dz-title">Drop Android screenshot</div>
+              <div class="dz-sub">PNG, JPG &nbsp;·&nbsp; <span class="link">browse files</span></div>
             </div>
             <div class="drop-preview" id="android-preview">
               <img id="android-preview-img" src="" alt=""/>
               <button class="remove-btn" onclick="clearAndroid()">×</button>
             </div>
-            <div class="auth-hint" style="margin-top:8px;">
-              <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="3" stroke="#6366f1" stroke-width="2"/></svg>
-              Take a screenshot on your Android device (Power + Volume Down) and upload here.
+            <div class="hint-box" style="margin-top:10px;">
+              <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="3" stroke="currentColor" stroke-width="2"/></svg>
+              Power + Volume Down to take a screenshot on Android, then upload here.
             </div>
           </div>
 
-          <!-- ADB sub-pane -->
-          <div id="android-adb-pane" style="display:none;">
-            <label class="field-label">Connected Devices</label>
-            <div style="display:flex;gap:8px;align-items:center;">
-              <select id="adb-device-select" style="flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;font-size:13px;color:var(--text);outline:none;">
-                <option value="">Loading devices…</option>
-              </select>
-              <button onclick="refreshDevices()" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;color:var(--muted);cursor:pointer;font-size:12px;white-space:nowrap;">
-                ↺ Refresh
-              </button>
+          <div id="android-adb-pane" style="display:none;flex-direction:column;gap:10px;">
+            <div class="field">
+              <label class="field-label">Connected Devices</label>
+              <div style="display:flex;gap:8px;">
+                <select id="adb-device-select" style="flex:1;">
+                  <option value="">Loading devices…</option>
+                </select>
+                <button onclick="refreshDevices()" class="btn-ghost" style="padding:9px 14px;white-space:nowrap;">↺ Refresh</button>
+              </div>
+              <div id="adb-device-status" style="font-size:11px;color:var(--t3);margin-top:4px;"></div>
             </div>
-            <div id="adb-device-status" style="font-size:11px;color:var(--muted);margin-top:6px;"></div>
-            <div class="auth-hint" style="margin-top:10px;">
-              <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="3" stroke="#6366f1" stroke-width="2"/></svg>
-              Enable USB Debugging on the device (Settings → Developer Options → USB Debugging) and connect via USB. ADB over Wi-Fi also works — connect first with <code style="font-family:monospace;color:var(--accent2);">adb connect IP:5555</code>.
+            <div class="hint-box">
+              <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="3" stroke="currentColor" stroke-width="2"/></svg>
+              Enable USB Debugging (Settings → Developer Options). ADB over Wi-Fi: <code>adb connect IP:5555</code>
             </div>
           </div>
 
-          <!-- Mobile URL sub-pane -->
-          <div id="android-url-pane" style="display:none;">
-            <label class="field-label" for="android-url-input">Web page URL (rendered at mobile viewport)</label>
-            <input type="url" id="android-url-input" placeholder="https://your-app.com/page"/>
-            <div class="auth-hint" style="margin-top:8px;">
-              <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="3" stroke="#6366f1" stroke-width="2"/></svg>
-              Playwright will render this URL at the selected Android viewport (390×844 or 768×1024).
+          <div id="android-url-pane" style="display:none;flex-direction:column;gap:10px;">
+            <div class="field">
+              <label class="field-label" for="android-url-input">URL to render at mobile viewport</label>
+              <input type="url" id="android-url-input" placeholder="https://your-app.com/page"/>
+            </div>
+            <div class="hint-box">
+              <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="3" stroke="currentColor" stroke-width="2"/></svg>
+              Playwright renders this URL at the selected Android viewport size.
             </div>
           </div>
         </div>
 
-        <!-- Windows tab -->
+        <!-- Windows -->
         <div class="tab-pane" id="impl-windows">
-          <!-- Sub-mode selector -->
-          <div class="auth-type-row" style="margin-bottom:14px;">
-            <button class="auth-type-btn active" data-wtype="upload"  onclick="setWindowsMode('upload',this)">
-              <svg width="11" height="11" fill="none" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div class="seg-row">
+            <button class="seg-btn active" data-wtype="upload"  onclick="setWindowsMode('upload',this)">
+              <svg width="10" height="10" fill="none" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
               Upload Screenshot
             </button>
-            <button class="auth-type-btn" data-wtype="win_url" onclick="setWindowsMode('win_url',this)">
-              <svg width="11" height="11" fill="none" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="M2 7h20" stroke="currentColor" stroke-width="1.5"/></svg>
+            <button class="seg-btn" data-wtype="win_url" onclick="setWindowsMode('win_url',this)">
+              <svg width="10" height="10" fill="none" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="M2 7h20" stroke="currentColor" stroke-width="1.5"/></svg>
               Windows URL
             </button>
           </div>
 
-          <!-- Upload sub-pane -->
           <div id="windows-upload-pane">
-            <div class="drop-zone" id="windows-drop-zone"
+            <div class="dropzone" id="windows-drop-zone"
                  ondragover="dragOver(event,'windows-drop-zone')" ondragleave="dragLeave(event,'windows-drop-zone')" ondrop="dropWindows(event)">
               <input type="file" id="windows-file-input" accept="image/*" onchange="windowsFileSelected(event)"/>
-              <div class="drop-icon">
-                <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
-                  <rect x="2" y="3" width="20" height="14" rx="2" stroke="#6366f1" stroke-width="2"/>
-                  <path d="M2 7h20M8 3v4M16 3v4" stroke="#6366f1" stroke-width="1.5" stroke-linecap="round"/>
+              <div class="dz-icon">
+                <svg width="22" height="22" fill="none" viewBox="0 0 24 24">
+                  <rect x="2" y="3" width="20" height="14" rx="2" stroke="var(--accent2)" stroke-width="2"/>
+                  <path d="M2 7h20M8 3v4M16 3v4" stroke="var(--accent2)" stroke-width="1.5" stroke-linecap="round"/>
                 </svg>
               </div>
-              <div class="drop-title">Drop Windows app screenshot</div>
-              <div class="drop-sub">PNG, JPG &nbsp;·&nbsp; <span>browse files</span></div>
+              <div class="dz-title">Drop Windows app screenshot</div>
+              <div class="dz-sub">PNG, JPG &nbsp;·&nbsp; <span class="link">browse files</span></div>
             </div>
             <div class="drop-preview" id="windows-preview">
               <img id="windows-preview-img" src="" alt=""/>
               <button class="remove-btn" onclick="clearWindows()">×</button>
             </div>
-            <div class="auth-hint" style="margin-top:8px;">
-              <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" stroke="#6366f1" stroke-width="2"/></svg>
-              Use Win + PrtScn or Snipping Tool to capture your Windows application, then upload here.
+            <div class="hint-box" style="margin-top:10px;">
+              <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2"/></svg>
+              Win + PrtScn or Snipping Tool to capture, then upload here.
             </div>
           </div>
 
-          <!-- Windows URL sub-pane -->
-          <div id="windows-url-pane" style="display:none;">
-            <label class="field-label" for="windows-url-input">Web / Electron app URL</label>
-            <input type="url" id="windows-url-input" placeholder="https://your-app.com/dashboard"/>
-            <div class="auth-hint" style="margin-top:8px;">
-              <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" stroke="#6366f1" stroke-width="2"/></svg>
-              Playwright renders this URL at the selected Windows viewport with a Windows Chrome user-agent. Works for web apps and Electron apps running locally.
+          <div id="windows-url-pane" style="display:none;flex-direction:column;gap:10px;">
+            <div class="field">
+              <label class="field-label" for="windows-url-input">Web / Electron app URL</label>
+              <input type="url" id="windows-url-input" placeholder="https://your-app.com/dashboard"/>
+            </div>
+            <div class="hint-box">
+              <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2"/></svg>
+              Playwright renders this URL at the selected Windows viewport with a Windows Chrome user-agent.
             </div>
           </div>
         </div>
@@ -1080,144 +995,147 @@ footer span { color: #475569; }
     </div>
   </div>
 
-  <!-- Run row -->
-  <div class="run-row">
+  <!-- Evaluate row -->
+  <div class="eval-row">
     <button class="btn-run" id="run-btn" onclick="runEval()">
       <svg id="run-icon" width="16" height="16" fill="none" viewBox="0 0 24 24">
         <path d="M5 3l14 9-14 9V3z" fill="currentColor"/>
       </svg>
       Evaluate Fidelity
     </button>
-    <button class="btn-reset" onclick="resetAll()">Reset</button>
+    <div class="vp-tag" id="viewport-hint">
+      <svg width="11" height="11" fill="none" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 21h8M12 17v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      1280 × 900 px · Desktop rubric
+    </div>
+    <button class="btn-ghost" onclick="resetAll()">Reset</button>
   </div>
 
-  <!-- Error box -->
-  <div class="error-box" id="error-box"></div>
+  <!-- Error -->
+  <div class="error-box" id="error-box">
+    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10" stroke="#F87171" stroke-width="2"/><path d="M12 8v4m0 4h.01" stroke="#F87171" stroke-width="2" stroke-linecap="round"/></svg>
+    <span id="error-msg"></span>
+  </div>
 
   <!-- Progress -->
-  <div id="progress-section">
-    <div class="progress-title">Evaluation Pipeline</div>
-    <div class="progress-bar-bg">
-      <div class="progress-bar-fill" id="prog-bar"></div>
+  <div id="progress-section" class="card">
+    <div class="card-head">
+      <div class="card-title">Evaluation Pipeline</div>
     </div>
-    <div class="steps">
-      <div class="step" id="step-reference">
-        <div class="step-dot"></div> Reference
+    <div class="card-body">
+      <div class="prog-track">
+        <div class="prog-fill" id="prog-bar"></div>
       </div>
-      <div class="step" id="step-impl">
-        <div class="step-dot"></div> Rendering
+      <div class="prog-steps">
+        <div class="step" id="step-reference"><div class="step-dot"></div>Reference</div>
+        <div class="step" id="step-impl"><div class="step-dot"></div>Rendering</div>
+        <div class="step" id="step-metrics"><div class="step-dot"></div>SSIM + Pixel</div>
+        <div class="step" id="step-vlm"><div class="step-dot"></div>VLM Judge</div>
+        <div class="step" id="step-composite"><div class="step-dot"></div>Composite</div>
       </div>
-      <div class="step" id="step-metrics">
-        <div class="step-dot"></div> SSIM + Pixel
-      </div>
-      <div class="step" id="step-vlm">
-        <div class="step-dot"></div> VLM Judge
-      </div>
-      <div class="step" id="step-composite">
-        <div class="step-dot"></div> Composite
-      </div>
+      <div id="progress-msg"></div>
     </div>
-    <div id="progress-msg"></div>
   </div>
 
   <!-- Results -->
   <div id="results-section">
 
     <!-- Score hero -->
-    <div class="score-hero" id="score-hero">
-      <div class="score-circle-wrap">
-        <div class="score-circle" id="score-circle">
-          <div class="score-num" id="score-num">—</div>
-          <div class="score-denom">/100</div>
+    <div class="card">
+      <div class="score-hero" id="score-hero">
+        <!-- Ring -->
+        <div class="ring-wrap">
+          <svg width="128" height="128" viewBox="0 0 128 128">
+            <circle class="ring-bg" cx="64" cy="64" r="54"/>
+            <circle class="ring-fill" id="score-ring" cx="64" cy="64" r="54"/>
+          </svg>
+          <div class="ring-center">
+            <div class="ring-num" id="score-num">—</div>
+            <div class="ring-denom">/100</div>
+          </div>
         </div>
-      </div>
-      <div style="flex:1">
-        <div class="grade-badge" id="grade-badge">—</div>
-        <div class="score-title" id="score-title">Composite Fidelity Score</div>
-        <div class="score-sub" id="score-sub"></div>
-      </div>
-      <div class="metric-cards">
-        <div class="metric-card">
-          <div class="mc-val" id="mc-ssim">—</div>
-          <div class="mc-lbl">SSIM<span class="mc-sub">Structural Similarity</span></div>
+
+        <!-- Info -->
+        <div class="score-info" id="score-circle">
+          <div class="grade-badge" id="grade-badge">—</div>
+          <div class="score-title" id="score-title">Composite Fidelity Score</div>
+          <div class="score-sub"  id="score-sub"></div>
         </div>
-        <div class="metric-card">
-          <div class="mc-val" id="mc-pm5">—</div>
-          <div class="mc-lbl">Pixel Match ≤5<span class="mc-sub">Strict tolerance</span></div>
-        </div>
-        <div class="metric-card">
-          <div class="mc-val" id="mc-pm20">—</div>
-          <div class="mc-lbl">Pixel Match ≤20<span class="mc-sub">Lenient tolerance</span></div>
-        </div>
-        <div class="metric-card">
-          <div class="mc-val" id="mc-vlm">—</div>
-          <div class="mc-lbl">VLM Score<span class="mc-sub">gpt-4o judgment</span></div>
+
+        <!-- Metrics -->
+        <div class="metric-grid">
+          <div class="metric-card">
+            <div class="mc-val" id="mc-ssim">—</div>
+            <div class="mc-lbl">SSIM<span class="mc-sub">Structural Similarity</span></div>
+          </div>
+          <div class="metric-card">
+            <div class="mc-val" id="mc-pm5">—</div>
+            <div class="mc-lbl">Pixel ≤5<span class="mc-sub">Strict tolerance</span></div>
+          </div>
+          <div class="metric-card">
+            <div class="mc-val" id="mc-pm20">—</div>
+            <div class="mc-lbl">Pixel ≤20<span class="mc-sub">Lenient tolerance</span></div>
+          </div>
+          <div class="metric-card">
+            <div class="mc-val" id="mc-vlm">—</div>
+            <div class="mc-lbl">VLM Score<span class="mc-sub">gpt-4o judgment</span></div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Screenshot comparison (with diff slider) -->
-    <div class="compare-row" id="compare-row">
-      <!-- Desktop view (default) -->
+    <!-- Screenshots comparison -->
+    <div class="compare-row">
+      <!-- Reference -->
       <div class="compare-panel" id="ref-compare-panel">
-        <div class="compare-header">
-          <span class="compare-label">Reference Design</span>
-          <span style="font-size:11px;color:var(--muted);" id="ref-compare-label">Golden standard</span>
+        <div class="compare-head">
+          <span class="compare-lbl">Reference Design</span>
+          <span class="compare-sub" id="ref-compare-label">Golden standard</span>
         </div>
-        <!-- Desktop: plain image -->
-        <img id="ref-result-img" src="" alt="Reference"/>
-        <!-- Mobile: phone frame -->
+        <div class="compare-img-box">
+          <img id="ref-result-img" src="" alt="Reference"/>
+        </div>
         <div class="phone-frame-wrap" id="ref-phone-wrap">
           <div class="phone-frame">
             <div class="phone-notch"></div>
             <img id="ref-result-img-mobile" src="" alt="Reference (mobile)"/>
           </div>
         </div>
-        <!-- Windows: window chrome frame -->
         <div class="win-frame-wrap" id="ref-win-wrap">
           <div class="win-frame">
             <div class="win-titlebar">
               <svg class="win-app-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6.5" height="6.5" fill="#f25022"/><rect x="8.5" y="1" width="6.5" height="6.5" fill="#7fba00"/><rect x="1" y="8.5" width="6.5" height="6.5" fill="#00a4ef"/><rect x="8.5" y="8.5" width="6.5" height="6.5" fill="#ffb900"/></svg>
               <span class="win-title">Reference Design</span>
-              <div class="win-controls">
-                <div class="win-btn">─</div>
-                <div class="win-btn">□</div>
-                <div class="win-btn close">✕</div>
-              </div>
+              <div class="win-controls"><div class="win-btn">─</div><div class="win-btn">□</div><div class="win-btn close">✕</div></div>
             </div>
             <img id="ref-result-img-windows" src="" alt="Reference (windows)"/>
           </div>
         </div>
       </div>
+
+      <!-- Implementation + diff slider -->
       <div class="compare-panel" id="impl-compare-panel">
-        <div class="compare-header">
-          <span class="compare-label">Implementation</span>
-          <span style="font-size:11px;color:var(--muted);" id="impl-compare-label">Drag to compare →</span>
+        <div class="compare-head">
+          <span class="compare-lbl">Implementation</span>
+          <span class="compare-sub" id="impl-compare-label">Drag handle to compare ←→</span>
         </div>
         <div class="diff-slider-wrap" id="diff-slider"
              onmousedown="sliderStart(event)" ontouchstart="sliderTouch(event)">
-          <img class="diff-img diff-img-impl" id="impl-result-img" src="" alt="Implementation"/>
-          <img class="diff-img diff-img-ref"  id="diff-ref-img"    src="" alt="Reference overlay"/>
+          <img class="diff-img-impl" id="impl-result-img" src="" alt="Implementation"/>
+          <img class="diff-img-ref"  id="diff-ref-img"    src="" alt="Reference overlay"/>
           <div class="diff-handle" id="diff-handle"></div>
         </div>
-        <!-- Mobile phone frame overlay -->
         <div class="phone-frame-wrap" id="impl-phone-wrap" style="display:none;">
           <div class="phone-frame">
             <div class="phone-notch"></div>
             <img id="impl-result-img-mobile" src="" alt="Implementation (mobile)"/>
           </div>
         </div>
-        <!-- Windows window chrome overlay -->
         <div class="win-frame-wrap" id="impl-win-wrap" style="display:none;">
           <div class="win-frame">
             <div class="win-titlebar">
               <svg class="win-app-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6.5" height="6.5" fill="#f25022"/><rect x="8.5" y="1" width="6.5" height="6.5" fill="#7fba00"/><rect x="1" y="8.5" width="6.5" height="6.5" fill="#00a4ef"/><rect x="8.5" y="8.5" width="6.5" height="6.5" fill="#ffb900"/></svg>
               <span class="win-title">Implementation</span>
-              <div class="win-controls">
-                <div class="win-btn">─</div>
-                <div class="win-btn">□</div>
-                <div class="win-btn close">✕</div>
-              </div>
+              <div class="win-controls"><div class="win-btn">─</div><div class="win-btn">□</div><div class="win-btn close">✕</div></div>
             </div>
             <img id="impl-result-img-windows" src="" alt="Implementation (windows)"/>
           </div>
@@ -1225,199 +1143,138 @@ footer span { color: #475569; }
       </div>
     </div>
 
-    <!-- VLM dimension bars -->
-    <div class="dim-section">
-      <div class="dim-section-title" id="rubric-title">VLM Rubric Breakdown</div>
+    <!-- VLM rubric -->
+    <div class="rubric-section">
+      <div class="rubric-head" id="rubric-title">VLM Rubric Breakdown</div>
 
-      <!-- Desktop rubric dimensions -->
       <div id="desktop-rubric">
-        <div class="dim-row">
-          <span class="dim-name">Layout &amp; Structure</span>
-          <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-layout" style="width:0%"></div></div>
-          <span class="dim-score" id="score-layout">—</span>
-        </div>
-        <div class="dim-row">
-          <span class="dim-name">Typography</span>
-          <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-typo" style="width:0%"></div></div>
-          <span class="dim-score" id="score-typo">—</span>
-        </div>
-        <div class="dim-row">
-          <span class="dim-name">Color &amp; Visual Style</span>
-          <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-color" style="width:0%"></div></div>
-          <span class="dim-score" id="score-color">—</span>
-        </div>
-        <div class="dim-row">
-          <span class="dim-name">Component Fidelity</span>
-          <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-comp" style="width:0%"></div></div>
-          <span class="dim-score" id="score-comp">—</span>
-        </div>
-        <div class="dim-row">
-          <span class="dim-name">Spacing &amp; Alignment</span>
-          <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-space" style="width:0%"></div></div>
-          <span class="dim-score" id="score-space">—</span>
-        </div>
+        <div class="dim-row"><span class="dim-name">Layout &amp; Structure</span><div class="dim-track"><div class="dim-bar-fill" id="bar-layout"></div></div><span class="dim-score" id="score-layout">—</span></div>
+        <div class="dim-row"><span class="dim-name">Typography</span><div class="dim-track"><div class="dim-bar-fill" id="bar-typo"></div></div><span class="dim-score" id="score-typo">—</span></div>
+        <div class="dim-row"><span class="dim-name">Color &amp; Visual Style</span><div class="dim-track"><div class="dim-bar-fill" id="bar-color"></div></div><span class="dim-score" id="score-color">—</span></div>
+        <div class="dim-row"><span class="dim-name">Component Fidelity</span><div class="dim-track"><div class="dim-bar-fill" id="bar-comp"></div></div><span class="dim-score" id="score-comp">—</span></div>
+        <div class="dim-row"><span class="dim-name">Spacing &amp; Alignment</span><div class="dim-track"><div class="dim-bar-fill" id="bar-space"></div></div><span class="dim-score" id="score-space">—</span></div>
       </div>
 
-      <!-- Mobile rubric dimensions -->
       <div id="mobile-rubric" style="display:none;">
-        <div class="dim-row">
-          <span class="dim-name">App Bar &amp; Navigation</span>
-          <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-appbar" style="width:0%"></div></div>
-          <span class="dim-score" id="score-appbar">—</span>
-        </div>
-        <div class="dim-row">
-          <span class="dim-name">Touch Targets</span>
-          <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-touch" style="width:0%"></div></div>
-          <span class="dim-score" id="score-touch">—</span>
-        </div>
-        <div class="dim-row">
-          <span class="dim-name">Typography</span>
-          <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-mtypo" style="width:0%"></div></div>
-          <span class="dim-score" id="score-mtypo">—</span>
-        </div>
-        <div class="dim-row">
-          <span class="dim-name">Layout &amp; Responsive</span>
-          <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-mlay" style="width:0%"></div></div>
-          <span class="dim-score" id="score-mlay">—</span>
-        </div>
-        <div class="dim-row">
-          <span class="dim-name">Component Fidelity</span>
-          <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-mcomp" style="width:0%"></div></div>
-          <span class="dim-score" id="score-mcomp">—</span>
-        </div>
+        <div class="dim-row"><span class="dim-name">App Bar &amp; Navigation</span><div class="dim-track"><div class="dim-bar-fill" id="bar-appbar"></div></div><span class="dim-score" id="score-appbar">—</span></div>
+        <div class="dim-row"><span class="dim-name">Touch Targets</span><div class="dim-track"><div class="dim-bar-fill" id="bar-touch"></div></div><span class="dim-score" id="score-touch">—</span></div>
+        <div class="dim-row"><span class="dim-name">Typography</span><div class="dim-track"><div class="dim-bar-fill" id="bar-mtypo"></div></div><span class="dim-score" id="score-mtypo">—</span></div>
+        <div class="dim-row"><span class="dim-name">Layout &amp; Responsive</span><div class="dim-track"><div class="dim-bar-fill" id="bar-mlay"></div></div><span class="dim-score" id="score-mlay">—</span></div>
+        <div class="dim-row"><span class="dim-name">Component Fidelity</span><div class="dim-track"><div class="dim-bar-fill" id="bar-mcomp"></div></div><span class="dim-score" id="score-mcomp">—</span></div>
       </div>
 
-      <!-- Windows rubric dimensions -->
       <div id="windows-rubric" style="display:none;">
-        <div class="dim-row">
-          <span class="dim-name">Title Bar &amp; Chrome</span>
-          <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-titlebar" style="width:0%"></div></div>
-          <span class="dim-score" id="score-titlebar">—</span>
-        </div>
-        <div class="dim-row">
-          <span class="dim-name">Navigation &amp; Menus</span>
-          <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-navmenus" style="width:0%"></div></div>
-          <span class="dim-score" id="score-navmenus">—</span>
-        </div>
-        <div class="dim-row">
-          <span class="dim-name">Controls &amp; Components</span>
-          <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-controls" style="width:0%"></div></div>
-          <span class="dim-score" id="score-controls">—</span>
-        </div>
-        <div class="dim-row">
-          <span class="dim-name">Typography &amp; Icons</span>
-          <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-wintypo" style="width:0%"></div></div>
-          <span class="dim-score" id="score-wintypo">—</span>
-        </div>
-        <div class="dim-row">
-          <span class="dim-name">Layout &amp; Spacing</span>
-          <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-winlay" style="width:0%"></div></div>
-          <span class="dim-score" id="score-winlay">—</span>
-        </div>
+        <div class="dim-row"><span class="dim-name">Title Bar &amp; Chrome</span><div class="dim-track"><div class="dim-bar-fill" id="bar-titlebar"></div></div><span class="dim-score" id="score-titlebar">—</span></div>
+        <div class="dim-row"><span class="dim-name">Navigation &amp; Menus</span><div class="dim-track"><div class="dim-bar-fill" id="bar-navmenus"></div></div><span class="dim-score" id="score-navmenus">—</span></div>
+        <div class="dim-row"><span class="dim-name">Controls &amp; Components</span><div class="dim-track"><div class="dim-bar-fill" id="bar-controls"></div></div><span class="dim-score" id="score-controls">—</span></div>
+        <div class="dim-row"><span class="dim-name">Typography &amp; Icons</span><div class="dim-track"><div class="dim-bar-fill" id="bar-wintypo"></div></div><span class="dim-score" id="score-wintypo">—</span></div>
+        <div class="dim-row"><span class="dim-name">Layout &amp; Spacing</span><div class="dim-track"><div class="dim-bar-fill" id="bar-winlay"></div></div><span class="dim-score" id="score-winlay">—</span></div>
       </div>
 
       <div class="summary-box" id="summary-box"></div>
     </div>
 
   </div><!-- /results -->
-</div><!-- /main -->
+</div><!-- /page -->
 
-<footer>
-  <svg width="12" height="12" fill="none" viewBox="0 0 24 24">
-    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
-          stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>
-  Design Fidelity Playground &nbsp;·&nbsp;
-  <span>Composite = 40% VLM + 35% SSIM + 25% Pixel-≤20</span>
+<footer class="footer">
+  <div style="display:flex;align-items:center;gap:8px;color:var(--t3)">
+    <svg width="12" height="12" fill="none" viewBox="0 0 24 24">
+      <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    Design Fidelity Playground
+  </div>
+  <div class="footer-right">
+    <span style="color:var(--t3)">Composite = 40% VLM + 35% SSIM + 25% Pixel-≤20</span>
+  </div>
 </footer>
 
 <script>
-// ── Platform toggle ──────────────────────────────────────────────────────
+/* ══════════════════════════════════════════
+   PLATFORM TOGGLE
+══════════════════════════════════════════ */
 let currentPlatform = "desktop";
+
 const VIEWPORT_INFO = {
-  desktop:        { label: "1280 × 900 px · Desktop rubric" },
-  android_phone:  { label: "390 × 844 px · Mobile rubric (phone)" },
-  android_tablet: { label: "768 × 1024 px · Mobile rubric (tablet)" },
-  windows_hd:     { label: "1366 × 768 px · Windows rubric (HD)" },
-  windows_fhd:    { label: "1920 × 1080 px · Windows rubric (Full HD)" },
+  desktop:        "1280 × 900 px · Desktop rubric",
+  android_phone:  "390 × 844 px · Mobile rubric (phone)",
+  android_tablet: "768 × 1024 px · Mobile rubric (tablet)",
+  windows_hd:     "1366 × 768 px · Windows rubric (HD)",
+  windows_fhd:    "1920 × 1080 px · Windows rubric (Full HD)",
 };
-const IS_MOBILE_PLATFORM  = p => p === "android_phone"  || p === "android_tablet";
-const IS_WINDOWS_PLATFORM = p => p === "windows_hd" || p === "windows_fhd";
+
+const IS_MOBILE  = p => p === "android_phone"  || p === "android_tablet";
+const IS_WINDOWS = p => p === "windows_hd" || p === "windows_fhd";
 
 function setPlatform(platform, btn) {
   currentPlatform = platform;
-  document.querySelectorAll(".platform-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".plat-pill").forEach(b => b.classList.remove("active"));
   btn.classList.add("active");
-  document.getElementById("viewport-hint").textContent = VIEWPORT_INFO[platform]?.label || "";
+  document.getElementById("viewport-hint").innerHTML =
+    (platform === "desktop"
+      ? `<svg width="11" height="11" fill="none" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 21h8M12 17v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`
+      : IS_MOBILE(platform)
+      ? `<svg width="11" height="11" fill="none" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="3" stroke="currentColor" stroke-width="1.5"/></svg>`
+      : `<svg width="11" height="11" fill="none" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M2 7h20" stroke="currentColor" stroke-width="1.2"/></svg>`)
+    + " " + (VIEWPORT_INFO[platform] || "");
 
   const androidTab = document.getElementById("tab-android");
   const windowsTab = document.getElementById("tab-windows");
 
-  if (IS_MOBILE_PLATFORM(platform)) {
+  if (IS_MOBILE(platform)) {
     androidTab.style.display = "";
     windowsTab.style.display = "none";
-    // If windows tab was active, switch back
-    if (document.querySelector('.tab[data-panel="impl"][data-tab="windows"]')?.classList.contains("active")) {
+    if (document.querySelector('.tab[data-panel="impl"][data-tab="windows"]')?.classList.contains("active"))
       document.querySelector('.tab[data-panel="impl"][data-tab="url"]').click();
-    }
-  } else if (IS_WINDOWS_PLATFORM(platform)) {
+  } else if (IS_WINDOWS(platform)) {
     windowsTab.style.display = "";
     androidTab.style.display = "none";
-    // If android tab was active, switch back
-    if (document.querySelector('.tab[data-panel="impl"][data-tab="android"]')?.classList.contains("active")) {
+    if (document.querySelector('.tab[data-panel="impl"][data-tab="android"]')?.classList.contains("active"))
       document.querySelector('.tab[data-panel="impl"][data-tab="url"]').click();
-    }
   } else {
     androidTab.style.display = "none";
     windowsTab.style.display = "none";
-    // If android or windows tab was active, switch back to URL
-    const activeImplTab = document.querySelector('.tab[data-panel="impl"].active')?.dataset.tab;
-    if (activeImplTab === "android" || activeImplTab === "windows") {
+    const active = document.querySelector('.tab[data-panel="impl"].active')?.dataset.tab;
+    if (active === "android" || active === "windows")
       document.querySelector('.tab[data-panel="impl"][data-tab="url"]').click();
-    }
   }
 }
 
-// ── Android sub-modes ────────────────────────────────────────────────────
+/* ══════════════════════════════════════════
+   ANDROID SUB-MODES
+══════════════════════════════════════════ */
 let currentAndroidMode = "upload";
 let androidImageFile   = null;
 
 function setAndroidMode(mode, btn) {
   currentAndroidMode = mode;
-  document.querySelectorAll("#impl-android .auth-type-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll("#impl-android .seg-btn").forEach(b => b.classList.remove("active"));
   btn.classList.add("active");
   document.getElementById("android-upload-pane").style.display  = mode === "upload"     ? "block" : "none";
-  document.getElementById("android-adb-pane").style.display     = mode === "adb"        ? "block" : "none";
-  document.getElementById("android-url-pane").style.display     = mode === "mobile_url" ? "block" : "none";
+  document.getElementById("android-adb-pane").style.display     = mode === "adb"        ? "flex"  : "none";
+  document.getElementById("android-url-pane").style.display     = mode === "mobile_url" ? "flex"  : "none";
   if (mode === "adb") refreshDevices();
 }
 
-function dragOver(e, zoneId) {
-  e.preventDefault();
-  document.getElementById(zoneId)?.classList.add("drag-over");
-}
-function dragLeave(e, zoneId) {
-  document.getElementById(zoneId)?.classList.remove("drag-over");
-}
+function dragOver(e, id) { e.preventDefault(); document.getElementById(id)?.classList.add("drag-over"); }
+function dragLeave(e, id){ document.getElementById(id)?.classList.remove("drag-over"); }
+
 function dropAndroid(e) {
-  e.preventDefault();
-  dragLeave(e, "android-drop-zone");
+  e.preventDefault(); dragLeave(e,"android-drop-zone");
   const f = e.dataTransfer.files[0];
   if (f && f.type.startsWith("image/")) setAndroidFile(f);
 }
-function androidFileSelected(e) {
-  const f = e.target.files[0];
-  if (f) setAndroidFile(f);
-}
+function androidFileSelected(e) { const f = e.target.files[0]; if (f) setAndroidFile(f); }
 function setAndroidFile(f) {
   androidImageFile = f;
-  const reader = new FileReader();
-  reader.onload = ev => {
+  const r = new FileReader();
+  r.onload = ev => {
     document.getElementById("android-preview-img").src = ev.target.result;
     document.getElementById("android-preview").style.display = "block";
     document.getElementById("android-drop-zone").style.display = "none";
   };
-  reader.readAsDataURL(f);
+  r.readAsDataURL(f);
 }
 function clearAndroid() {
   androidImageFile = null;
@@ -1427,68 +1284,48 @@ function clearAndroid() {
 }
 
 async function refreshDevices() {
-  const sel    = document.getElementById("adb-device-select");
-  const status = document.getElementById("adb-device-status");
+  const sel = document.getElementById("adb-device-select");
+  const st  = document.getElementById("adb-device-status");
   sel.innerHTML = "<option value=''>Loading…</option>";
-  status.textContent = "";
+  st.textContent = "";
   try {
-    const res  = await fetch("/api/devices");
-    const data = await res.json();
-    if (data.error) {
-      sel.innerHTML = "<option value=''>ADB not available</option>";
-      status.textContent = "Error: " + data.error;
-      return;
-    }
+    const data = await fetch("/api/devices").then(r => r.json());
+    if (data.error) { sel.innerHTML = "<option value=''>ADB not available</option>"; st.textContent = data.error; return; }
     const online = data.devices.filter(d => d.status === "device");
-    if (online.length === 0) {
-      sel.innerHTML = "<option value=''>No devices found</option>";
-      status.textContent = "Connect an Android device via USB or run: adb connect IP:5555";
-    } else {
-      sel.innerHTML = online.map(d => `<option value="${d.id}">${d.id}</option>`).join("");
-      status.textContent = `${online.length} device(s) online`;
-    }
-    // Also list offline devices as disabled options
-    const offline = data.devices.filter(d => d.status !== "device");
-    offline.forEach(d => {
-      sel.innerHTML += `<option value="" disabled>${d.id} (${d.status})</option>`;
-    });
-  } catch(e) {
-    sel.innerHTML = "<option value=''>Error</option>";
-    status.textContent = e.message;
-  }
+    if (!online.length) { sel.innerHTML = "<option value=''>No devices found</option>"; st.textContent = "Connect a device via USB or run: adb connect IP:5555"; }
+    else { sel.innerHTML = online.map(d => `<option value="${d.id}">${d.id}</option>`).join(""); st.textContent = online.length + " device(s) online"; }
+    data.devices.filter(d => d.status !== "device").forEach(d => { sel.innerHTML += `<option value="" disabled>${d.id} (${d.status})</option>`; });
+  } catch(e) { sel.innerHTML = "<option value=''>Error</option>"; st.textContent = e.message; }
 }
 
-// ── Windows sub-modes ────────────────────────────────────────────────────
+/* ══════════════════════════════════════════
+   WINDOWS SUB-MODES
+══════════════════════════════════════════ */
 let currentWindowsMode = "upload";
 let windowsImageFile   = null;
 
 function setWindowsMode(mode, btn) {
   currentWindowsMode = mode;
-  document.querySelectorAll("#impl-windows .auth-type-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll("#impl-windows .seg-btn").forEach(b => b.classList.remove("active"));
   btn.classList.add("active");
   document.getElementById("windows-upload-pane").style.display = mode === "upload"  ? "block" : "none";
-  document.getElementById("windows-url-pane").style.display    = mode === "win_url" ? "block" : "none";
+  document.getElementById("windows-url-pane").style.display    = mode === "win_url" ? "flex"  : "none";
 }
-
 function dropWindows(e) {
-  e.preventDefault();
-  dragLeave(e, "windows-drop-zone");
+  e.preventDefault(); dragLeave(e,"windows-drop-zone");
   const f = e.dataTransfer.files[0];
   if (f && f.type.startsWith("image/")) setWindowsFile(f);
 }
-function windowsFileSelected(e) {
-  const f = e.target.files[0];
-  if (f) setWindowsFile(f);
-}
+function windowsFileSelected(e) { const f = e.target.files[0]; if (f) setWindowsFile(f); }
 function setWindowsFile(f) {
   windowsImageFile = f;
-  const reader = new FileReader();
-  reader.onload = ev => {
+  const r = new FileReader();
+  r.onload = ev => {
     document.getElementById("windows-preview-img").src = ev.target.result;
     document.getElementById("windows-preview").style.display = "block";
     document.getElementById("windows-drop-zone").style.display = "none";
   };
-  reader.readAsDataURL(f);
+  r.readAsDataURL(f);
 }
 function clearWindows() {
   windowsImageFile = null;
@@ -1497,7 +1334,9 @@ function clearWindows() {
   document.getElementById("windows-file-input").value = "";
 }
 
-// ── Auth accordion ───────────────────────────────────────────────────────
+/* ══════════════════════════════════════════
+   AUTH ACCORDION
+══════════════════════════════════════════ */
 let currentAuthType = "none";
 
 function toggleAuth(btn) {
@@ -1509,18 +1348,19 @@ function toggleAuth(btn) {
 
 function setAuthType(type, btn) {
   currentAuthType = type;
-  document.querySelectorAll(".auth-type-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".seg-btn[data-type]").forEach(b => b.classList.remove("active"));
   btn.classList.add("active");
   ["form","cookies","basic"].forEach(t => {
     document.getElementById(`auth-fields-${t}`).style.display = t === type ? "flex" : "none";
   });
   const badge = document.getElementById("auth-badge");
-  const labels = {none:"None", form:"Form Agent", cookies:"Cookies", basic:"Basic"};
-  badge.textContent = labels[type] || type;
-  badge.className   = "auth-badge" + (type !== "none" ? " active" : "");
+  badge.textContent = {none:"None",form:"Form Agent",cookies:"Cookies",basic:"Basic"}[type] || type;
+  badge.className = "auth-badge" + (type !== "none" ? " active" : "");
 }
 
-// ── Tab switching ─────────────────────────────────────────────────────────
+/* ══════════════════════════════════════════
+   TAB SWITCHING
+══════════════════════════════════════════ */
 document.querySelectorAll(".tab").forEach(tab => {
   tab.addEventListener("click", () => {
     const panel = tab.dataset.panel;
@@ -1532,66 +1372,63 @@ document.querySelectorAll(".tab").forEach(tab => {
   });
 });
 
-// ── Drag & drop ───────────────────────────────────────────────────────────
+/* ══════════════════════════════════════════
+   DRAG & DROP (reference)
+══════════════════════════════════════════ */
 let refImageFile = null;
 
 function dropFile(e) {
-  e.preventDefault();
-  dragLeave(e, "drop-zone");
+  e.preventDefault(); dragLeave(e,"drop-zone");
   const f = e.dataTransfer.files[0];
   if (f && f.type.startsWith("image/")) setRefFile(f);
 }
-function fileSelected(e) {
-  const f = e.target.files[0];
-  if (f) setRefFile(f);
-}
+function fileSelected(e) { const f = e.target.files[0]; if (f) setRefFile(f); }
 function setRefFile(f) {
   refImageFile = f;
-  const reader = new FileReader();
-  reader.onload = ev => {
+  const r = new FileReader();
+  r.onload = ev => {
     document.getElementById("ref-preview-img").src = ev.target.result;
     document.getElementById("ref-preview").style.display = "block";
-    document.getElementById("drop-zone").style.display  = "none";
+    document.getElementById("drop-zone").style.display = "none";
   };
-  reader.readAsDataURL(f);
+  r.readAsDataURL(f);
 }
 function clearRef() {
   refImageFile = null;
   document.getElementById("ref-preview").style.display = "none";
-  document.getElementById("drop-zone").style.display   = "";
+  document.getElementById("drop-zone").style.display = "";
   document.getElementById("ref-file-input").value = "";
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────
+/* ══════════════════════════════════════════
+   HELPERS
+══════════════════════════════════════════ */
 function activeTab(panel) {
   return document.querySelector(`.tab[data-panel="${panel}"].active`)?.dataset.tab;
 }
 function showError(msg) {
-  const el = document.getElementById("error-box");
-  el.textContent = "Error: " + msg;
-  el.style.display = "block";
+  const box = document.getElementById("error-box");
+  document.getElementById("error-msg").textContent = msg;
+  box.style.display = "flex";
 }
-function hideError() {
-  document.getElementById("error-box").style.display = "none";
-}
+function hideError() { document.getElementById("error-box").style.display = "none"; }
 function setStep(id, state) {
-  // state: '' | 'active' | 'done'
   const el = document.getElementById("step-" + id);
-  if (!el) return;
-  el.className = "step" + (state ? " " + state : "");
+  if (el) el.className = "step" + (state ? " " + state : "");
 }
 function setProgress(pct, msg) {
   document.getElementById("prog-bar").style.width = pct + "%";
   document.getElementById("progress-msg").textContent = msg || "";
 }
 
-// ── Run evaluation ────────────────────────────────────────────────────────
+/* ══════════════════════════════════════════
+   RUN EVALUATION
+══════════════════════════════════════════ */
 async function runEval() {
   hideError();
   const runBtn  = document.getElementById("run-btn");
   const runIcon = document.getElementById("run-icon");
 
-  // Gather inputs
   const refTab  = activeTab("ref");
   const implTab = activeTab("impl");
 
@@ -1607,8 +1444,7 @@ async function runEval() {
   } else if (refTab === "figma") {
     const v = document.getElementById("ref-figma-url").value.trim();
     if (!v) { showError("Please enter a Figma URL."); return; }
-    fd.append("ref_url", v);
-    fd.set("ref_type", "figma");
+    fd.append("ref_url", v); fd.set("ref_type","figma");
     const tok = document.getElementById("ref-figma-token").value.trim();
     if (tok) fd.append("ref_figma_token", tok);
   } else {
@@ -1622,15 +1458,14 @@ async function runEval() {
     const v = document.getElementById("impl-url-input").value.trim();
     if (!v) { showError("Please enter an implementation URL."); return; }
     fd.append("impl_url", v);
-    // Auth config
     fd.append("impl_auth_type", currentAuthType);
     if (currentAuthType === "form") {
-      fd.append("impl_auth_user",   document.getElementById("auth-form-user").value.trim());
-      fd.append("impl_auth_pass",   document.getElementById("auth-form-pass").value);
+      fd.append("impl_auth_user", document.getElementById("auth-form-user").value.trim());
+      fd.append("impl_auth_pass", document.getElementById("auth-form-pass").value);
       const loginUrl  = document.getElementById("auth-login-url").value.trim();
       const targetUrl = document.getElementById("auth-target-url").value.trim();
-      if (loginUrl)  { fd.set("impl_url", loginUrl); fd.append("impl_auth_target", targetUrl || v); }
-      else           { fd.append("impl_auth_target", targetUrl); }
+      if (loginUrl) { fd.set("impl_url", loginUrl); fd.append("impl_auth_target", targetUrl || v); }
+      else          { fd.append("impl_auth_target", targetUrl); }
     } else if (currentAuthType === "cookies") {
       fd.append("impl_auth_cookies", document.getElementById("auth-cookies").value.trim());
       fd.append("impl_auth_target",  document.getElementById("auth-cookie-target").value.trim() || v);
@@ -1645,96 +1480,71 @@ async function runEval() {
   } else if (implTab === "android") {
     if (currentAndroidMode === "upload") {
       if (!androidImageFile) { showError("Please upload an Android screenshot."); return; }
-      fd.set("impl_type", "android_upload");
-      fd.append("impl_android_image", androidImageFile);
+      fd.set("impl_type","android_upload"); fd.append("impl_android_image", androidImageFile);
     } else if (currentAndroidMode === "adb") {
-      const deviceId = document.getElementById("adb-device-select").value;
-      if (!deviceId) { showError("Please select an ADB device."); return; }
-      fd.set("impl_type", "adb");
-      fd.append("impl_adb_device", deviceId);
-    } else if (currentAndroidMode === "mobile_url") {
+      const dev = document.getElementById("adb-device-select").value;
+      if (!dev) { showError("Please select an ADB device."); return; }
+      fd.set("impl_type","adb"); fd.append("impl_adb_device", dev);
+    } else {
       const v = document.getElementById("android-url-input").value.trim();
-      if (!v) { showError("Please enter a URL for mobile rendering."); return; }
-      fd.set("impl_type", "url");
-      fd.append("impl_url", v);
+      if (!v) { showError("Please enter a URL."); return; }
+      fd.set("impl_type","url"); fd.append("impl_url", v);
     }
   } else if (implTab === "windows") {
     if (currentWindowsMode === "upload") {
-      if (!windowsImageFile) { showError("Please upload a Windows app screenshot."); return; }
-      fd.set("impl_type", "windows_upload");
-      fd.append("impl_android_image", windowsImageFile);  // reuses same server field
-    } else if (currentWindowsMode === "win_url") {
+      if (!windowsImageFile) { showError("Please upload a Windows screenshot."); return; }
+      fd.set("impl_type","windows_upload"); fd.append("impl_android_image", windowsImageFile);
+    } else {
       const v = document.getElementById("windows-url-input").value.trim();
-      if (!v) { showError("Please enter a URL for Windows rendering."); return; }
-      fd.set("impl_type", "url");
-      fd.append("impl_url", v);
+      if (!v) { showError("Please enter a URL."); return; }
+      fd.set("impl_type","url"); fd.append("impl_url", v);
     }
-  } else {
-    showError("Unknown implementation type."); return;
   }
 
-  // UI: loading state
+  // Loading state
   runBtn.disabled = true;
   runBtn.classList.add("loading");
   runIcon.innerHTML = `<circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.5" stroke-dasharray="28" stroke-dashoffset="14" fill="none"/>`;
 
   document.getElementById("results-section").style.display = "none";
   document.getElementById("progress-section").style.display = "block";
-  ["reference","impl","metrics","vlm","composite"].forEach(s => setStep(s, ""));
-  setProgress(0, "Starting evaluation …");
+  ["reference","impl","metrics","vlm","composite"].forEach(s => setStep(s,""));
+  setProgress(0,"Starting evaluation …");
 
-  // Submit job
   let jobId;
   try {
-    const res = await fetch("/api/evaluate", { method: "POST", body: fd });
+    const res = await fetch("/api/evaluate",{method:"POST",body:fd});
     const data = await res.json();
     jobId = data.job_id;
-  } catch(e) {
-    showError("Failed to submit: " + e.message);
-    resetBtn(runBtn, runIcon); return;
-  }
+  } catch(e) { showError("Failed to submit: " + e.message); resetBtn(runBtn,runIcon); return; }
 
-  // SSE stream
   const es = new EventSource(`/api/stream/${jobId}`);
-  es.onmessage = ev => {
-    const msg = JSON.parse(ev.data);
-    handleMsg(msg, runBtn, runIcon, es);
-  };
-  es.onerror = () => {
-    showError("Stream connection error.");
-    resetBtn(runBtn, runIcon);
-    es.close();
-  };
+  es.onmessage = ev => { const msg = JSON.parse(ev.data); handleMsg(msg,runBtn,runIcon,es); };
+  es.onerror   = () => { showError("Stream connection error."); resetBtn(runBtn,runIcon); es.close(); };
 }
 
 function handleMsg(msg, runBtn, runIcon, es) {
   if (msg.type === "progress") {
     setProgress(msg.pct, msg.msg);
-    // Activate/complete steps
-    const stepMap = { reference:"reference", impl:"impl", metrics:"metrics", vlm:"vlm", composite:"composite" };
-    if (msg.step in stepMap) {
-      // Mark previous steps done
-      const order = ["reference","impl","metrics","vlm","composite"];
-      const idx   = order.indexOf(msg.step);
-      order.slice(0, idx).forEach(s => setStep(s, "done"));
-      setStep(msg.step, "active");
+    const order = ["reference","impl","metrics","vlm","composite"];
+    const idx   = order.indexOf(msg.step);
+    if (idx >= 0) {
+      order.slice(0,idx).forEach(s => setStep(s,"done"));
+      setStep(msg.step,"active");
     }
-    // Partial image updates
     if (msg.ref_img)  document.getElementById("ref-result-img").src = msg.ref_img;
     if (msg.impl_img) document.getElementById("impl-result-img").src = msg.impl_img;
-
   } else if (msg.type === "done") {
     es.close();
-    setProgress(100, "Complete ✓");
-    ["reference","impl","metrics","vlm","composite"].forEach(s => setStep(s, "done"));
+    setProgress(100,"Complete ✓");
+    ["reference","impl","metrics","vlm","composite"].forEach(s => setStep(s,"done"));
     showResults(msg);
-    resetBtn(runBtn, runIcon);
-
+    resetBtn(runBtn,runIcon);
   } else if (msg.type === "error") {
     es.close();
     showError(msg.msg);
     if (msg.trace) console.error(msg.trace);
-    resetBtn(runBtn, runIcon);
+    resetBtn(runBtn,runIcon);
   }
 }
 
@@ -1744,252 +1554,236 @@ function resetBtn(btn, icon) {
   icon.innerHTML = `<path d="M5 3l14 9-14 9V3z" fill="currentColor"/>`;
 }
 
-// ── Show results ──────────────────────────────────────────────────────────
+/* ══════════════════════════════════════════
+   SHOW RESULTS
+══════════════════════════════════════════ */
 function showResults(data) {
-  document.getElementById("results-section").style.display = "flex";
-  document.getElementById("results-section").style.flexDirection = "column";
-  document.getElementById("results-section").style.gap = "16px";
+  const rs = document.getElementById("results-section");
+  rs.style.display = "flex";
+  rs.style.flexDirection = "column";
+  rs.style.gap = "16px";
 
   const g = data.grade;
   const c = data.composite;
+  const CIRCUM = 339.3; // 2π×54
 
-  // Score circle
-  const circle = document.getElementById("score-circle");
-  circle.style.borderColor = g.color;
-  document.getElementById("score-num").textContent  = c;
-  document.getElementById("score-num").style.color  = g.color;
+  // Score ring animation
+  const ring = document.getElementById("score-ring");
+  ring.style.stroke = g.color;
+  ring.style.strokeDashoffset = CIRCUM - (c / 100) * CIRCUM;
 
-  // Grade badge
+  document.getElementById("score-num").textContent = c;
+  document.getElementById("score-num").style.color = g.color;
+
   const badge = document.getElementById("grade-badge");
-  badge.textContent = `${g.letter} — ${g.label}`;
+  badge.textContent = `${g.letter}  —  ${g.label}`;
   badge.style.background = g.color + "22";
   badge.style.color       = g.color;
-  badge.style.border      = `1px solid ${g.color}55`;
+  badge.style.border      = `1px solid ${g.color}44`;
 
   const authNote = data.auth_type && data.auth_type !== "none"
-    ? ` (rendered via ${data.auth_type} auth agent)`  : "";
+    ? ` · rendered via ${data.auth_type} auth` : "";
   document.getElementById("score-sub").textContent = (data.vlm?.summary || "") + authNote;
 
-  // Metric cards
+  // Metrics
   document.getElementById("mc-ssim").textContent  = data.pixel.ssim;
   document.getElementById("mc-pm5").textContent   = data.pixel.pixel_match_5 + "%";
   document.getElementById("mc-pm20").textContent  = data.pixel.pixel_match_20 + "%";
   document.getElementById("mc-vlm").textContent   = (data.vlm?.total ?? "—") + "/100";
 
-  // Screenshots + platform frame toggle
+  // Screenshots
   const isMobile  = data.is_mobile;
   const isWindows = data.is_windows;
   const platType  = data.plat_type || "desktop";
 
   if (data.ref_img) {
-    document.getElementById("ref-result-img").src          = data.ref_img;
-    document.getElementById("ref-result-img-mobile").src   = data.ref_img;
-    document.getElementById("ref-result-img-windows").src  = data.ref_img;
-    document.getElementById("diff-ref-img").src            = data.ref_img;
+    ["ref-result-img","ref-result-img-mobile","ref-result-img-windows","diff-ref-img"]
+      .forEach(id => { const el = document.getElementById(id); if(el) el.src = data.ref_img; });
   }
   if (data.impl_img) {
-    document.getElementById("impl-result-img").src         = data.impl_img;
-    document.getElementById("impl-result-img-mobile").src  = data.impl_img;
-    document.getElementById("impl-result-img-windows").src = data.impl_img;
+    ["impl-result-img","impl-result-img-mobile","impl-result-img-windows"]
+      .forEach(id => { const el = document.getElementById(id); if(el) el.src = data.impl_img; });
   }
 
-  // Frame visibility
-  document.getElementById("ref-result-img").style.display  = (isMobile || isWindows) ? "none" : "";
+  // Frame display
+  document.getElementById("ref-result-img").style.display  = (isMobile||isWindows) ? "none" : "";
   document.getElementById("ref-phone-wrap").classList.toggle("visible", isMobile);
-  document.getElementById("ref-win-wrap").classList.toggle("visible", isWindows);
-
-  document.getElementById("diff-slider").style.display      = (isMobile || isWindows) ? "none" : "";
-  document.getElementById("impl-phone-wrap").style.display  = isMobile  ? "flex"  : "none";
-  document.getElementById("impl-win-wrap").style.display    = isWindows ? "flex"  : "none";
-
+  document.getElementById("ref-win-wrap").classList.toggle("visible",   isWindows);
+  document.getElementById("diff-slider").style.display     = (isMobile||isWindows) ? "none" : "";
+  document.getElementById("impl-phone-wrap").style.display = isMobile  ? "flex" : "none";
+  document.getElementById("impl-win-wrap").style.display   = isWindows ? "flex" : "none";
   document.getElementById("ref-compare-label").textContent =
     isMobile ? "Mobile design" : isWindows ? "Windows design" : "Golden standard";
   document.getElementById("impl-compare-label").textContent =
-    (isMobile || isWindows) ? "" : "Drag to compare →";
+    (isMobile||isWindows) ? "" : "Drag handle to compare ←→";
 
-  // VLM rubric panel visibility
-  document.getElementById("desktop-rubric").style.display = platType === "desktop"  ? ""      : "none";
-  document.getElementById("mobile-rubric").style.display  = platType === "mobile"   ? "block" : "none";
-  document.getElementById("windows-rubric").style.display = platType === "windows"  ? "block" : "none";
-  const rubricTitles = { desktop: "VLM Rubric Breakdown", mobile: "VLM Mobile Rubric Breakdown", windows: "VLM Windows Rubric Breakdown" };
-  document.getElementById("rubric-title").textContent = rubricTitles[platType] || "VLM Rubric Breakdown";
+  // Rubric panels
+  document.getElementById("desktop-rubric").style.display = platType==="desktop"  ? "" : "none";
+  document.getElementById("mobile-rubric").style.display  = platType==="mobile"   ? "block" : "none";
+  document.getElementById("windows-rubric").style.display = platType==="windows"  ? "block" : "none";
+  document.getElementById("rubric-title").textContent =
+    platType==="mobile" ? "VLM Mobile Rubric" : platType==="windows" ? "VLM Windows Rubric" : "VLM Rubric Breakdown";
 
-  function renderBar(barId, scoreId, val) {
+  function bar(barId, scoreId, val) {
     const pct = val / 20 * 100;
-    const col = pct >= 70 ? "#6366f1" : pct >= 40 ? "#f59e0b" : "#ef4444";
-    const bar = document.getElementById(barId);
-    if (!bar) return;
-    bar.style.width      = pct + "%";
-    bar.style.background = col;
-    document.getElementById(scoreId).textContent = val + "/20";
-    document.getElementById(scoreId).style.color = col;
+    const col = pct >= 70 ? "var(--accent)" : pct >= 40 ? "var(--yellow)" : "var(--red)";
+    const b = document.getElementById(barId);
+    if (!b) return;
+    b.style.width = pct + "%";
+    b.style.background = col;
+    const s = document.getElementById(scoreId);
+    if (!s) return;
+    s.textContent = val + "/20";
+    s.style.color = col;
   }
 
   if (platType === "mobile") {
-    renderBar("bar-appbar", "score-appbar", data.vlm?.app_bar_navigation ?? 0);
-    renderBar("bar-touch",  "score-touch",  data.vlm?.touch_targets ?? 0);
-    renderBar("bar-mtypo",  "score-mtypo",  data.vlm?.typography ?? 0);
-    renderBar("bar-mlay",   "score-mlay",   data.vlm?.layout_responsive ?? 0);
-    renderBar("bar-mcomp",  "score-mcomp",  data.vlm?.component_fidelity ?? 0);
+    bar("bar-appbar","score-appbar", data.vlm?.app_bar_navigation  ?? 0);
+    bar("bar-touch", "score-touch",  data.vlm?.touch_targets       ?? 0);
+    bar("bar-mtypo", "score-mtypo",  data.vlm?.typography          ?? 0);
+    bar("bar-mlay",  "score-mlay",   data.vlm?.layout_responsive   ?? 0);
+    bar("bar-mcomp", "score-mcomp",  data.vlm?.component_fidelity  ?? 0);
   } else if (platType === "windows") {
-    renderBar("bar-titlebar", "score-titlebar", data.vlm?.titlebar_chrome    ?? 0);
-    renderBar("bar-navmenus", "score-navmenus", data.vlm?.navigation_menus   ?? 0);
-    renderBar("bar-controls", "score-controls", data.vlm?.controls_components ?? 0);
-    renderBar("bar-wintypo",  "score-wintypo",  data.vlm?.typography_icons   ?? 0);
-    renderBar("bar-winlay",   "score-winlay",   data.vlm?.layout_spacing     ?? 0);
+    bar("bar-titlebar","score-titlebar", data.vlm?.titlebar_chrome     ?? 0);
+    bar("bar-navmenus","score-navmenus", data.vlm?.navigation_menus    ?? 0);
+    bar("bar-controls","score-controls", data.vlm?.controls_components ?? 0);
+    bar("bar-wintypo", "score-wintypo",  data.vlm?.typography_icons    ?? 0);
+    bar("bar-winlay",  "score-winlay",   data.vlm?.layout_spacing      ?? 0);
   } else {
-    renderBar("bar-layout", "score-layout", data.vlm?.layout_structure   ?? 0);
-    renderBar("bar-typo",   "score-typo",   data.vlm?.typography         ?? 0);
-    renderBar("bar-color",  "score-color",  data.vlm?.color_visual_style ?? 0);
-    renderBar("bar-comp",   "score-comp",   data.vlm?.component_fidelity ?? 0);
-    renderBar("bar-space",  "score-space",  data.vlm?.spacing_alignment  ?? 0);
+    bar("bar-layout","score-layout", data.vlm?.layout_structure   ?? 0);
+    bar("bar-typo",  "score-typo",   data.vlm?.typography         ?? 0);
+    bar("bar-color", "score-color",  data.vlm?.color_visual_style ?? 0);
+    bar("bar-comp",  "score-comp",   data.vlm?.component_fidelity ?? 0);
+    bar("bar-space", "score-space",  data.vlm?.spacing_alignment  ?? 0);
   }
 
-  // Summary
   document.getElementById("summary-box").textContent = data.vlm?.summary || "";
 
-  // Scroll to results
-  setTimeout(() => {
-    document.getElementById("results-section").scrollIntoView({ behavior:"smooth", block:"start" });
-  }, 100);
+  setTimeout(() => rs.scrollIntoView({behavior:"smooth",block:"start"}), 100);
 }
 
-// ── Diff slider ──────────────────────────────────────────────────────────
+/* ══════════════════════════════════════════
+   DIFF SLIDER
+══════════════════════════════════════════ */
 let sliding = false;
 function sliderStart(e) {
   sliding = true;
   moveSlider(e.clientX, e.currentTarget);
   document.addEventListener("mousemove", sliderMove);
-  document.addEventListener("mouseup", () => { sliding = false; document.removeEventListener("mousemove", sliderMove); });
+  document.addEventListener("mouseup", () => { sliding=false; document.removeEventListener("mousemove",sliderMove); });
 }
 function sliderTouch(e) {
   const wrap = e.currentTarget;
-  function onMove(ev) { moveSlider(ev.touches[0].clientX, wrap); }
-  function onEnd()    { document.removeEventListener("touchmove", onMove); }
-  document.addEventListener("touchmove", onMove);
-  document.addEventListener("touchend",  onEnd);
+  const onMove = ev => moveSlider(ev.touches[0].clientX, wrap);
+  const onEnd  = ()  => document.removeEventListener("touchmove",onMove);
+  document.addEventListener("touchmove",onMove);
+  document.addEventListener("touchend", onEnd);
   moveSlider(e.touches[0].clientX, wrap);
 }
-function sliderMove(e) { if (!sliding) return; const w = document.getElementById("diff-slider"); moveSlider(e.clientX, w); }
+function sliderMove(e) { if (!sliding) return; moveSlider(e.clientX, document.getElementById("diff-slider")); }
 function moveSlider(clientX, wrap) {
   const rect = wrap.getBoundingClientRect();
   let pct = (clientX - rect.left) / rect.width * 100;
   pct = Math.max(0, Math.min(100, pct));
-  document.getElementById("diff-ref-img").style.clipPath = `inset(0 ${100 - pct}% 0 0)`;
-  document.getElementById("diff-handle").style.left       = pct + "%";
+  document.getElementById("diff-ref-img").style.clipPath = `inset(0 ${100-pct}% 0 0)`;
+  document.getElementById("diff-handle").style.left      = pct + "%";
 }
 
-// ── Sample Library ────────────────────────────────────────────────────────
-const SAMPLE_IDS = ["login", "pricing", "signup"];
-
+/* ══════════════════════════════════════════
+   SAMPLE LIBRARY
+══════════════════════════════════════════ */
 async function loadSampleLibrary() {
   const container = document.getElementById("sample-cards");
   try {
-    const res = await fetch("/api/samples");
-    const samples = await res.json();
-    const ids     = ["login","pricing","signup"];
-
+    const samples = await fetch("/api/samples").then(r => r.json());
+    const ids = ["login","pricing","signup"];
     container.innerHTML = "";
+
     samples.forEach((s, i) => {
       const id = ids[i] || i;
-      const card = document.createElement("div");
-      card.className = "sample-card";
-      card.innerHTML = `
-        <div class="sample-info">
-          <span class="sample-emoji">${s.icon}</span>
-          <div class="sample-name">${s.title}</div>
-          <div class="sample-desc">${s.description}</div>
+      const chip = document.createElement("div");
+      chip.className = "sample-chip";
+      chip.innerHTML = `
+        <div class="sample-chip-info">
+          <span class="chip-emoji">${s.icon}</span>
+          <div class="chip-text">
+            <div class="chip-name">${s.title}</div>
+            <div class="chip-desc">${s.description}</div>
+          </div>
         </div>
-        <div class="sample-variants">
-          <button class="variant-btn ref"   onclick="loadSample('${id}','reference','ref')">
-            <span class="vdot"></span>Reference design
+        <div class="chip-actions">
+          <button class="chip-btn ref"  onclick="loadSample('${id}','reference','ref')">
+            <span class="cdot"></span>Reference
           </button>
-          <button class="variant-btn close" onclick="loadSample('${id}','close','impl')">
-            <span class="vdot"></span>Close implementation
+          <button class="chip-btn good" onclick="loadSample('${id}','close','impl')">
+            <span class="cdot"></span>Close
           </button>
-          <button class="variant-btn bad"   onclick="loadSample('${id}','degraded','impl')">
-            <span class="vdot"></span>Degraded implementation
+          <button class="chip-btn bad"  onclick="loadSample('${id}','degraded','impl')">
+            <span class="cdot"></span>Degraded
           </button>
         </div>`;
-      container.appendChild(card);
+      container.appendChild(chip);
     });
 
-    // Add "pair" quick-run buttons
-    const pairWrap = document.createElement("div");
-    pairWrap.style.cssText = "display:flex;flex-direction:column;gap:6px;justify-content:center;";
+    // Quick-run column
+    const col = document.createElement("div");
+    col.className = "quick-col";
     samples.forEach((s, i) => {
       const id = ids[i] || i;
-      ["close","degraded"].forEach(variant => {
-        const label  = variant === "close" ? "Good" : "Degraded";
-        const color  = variant === "close" ? "#4ade80" : "#f87171";
-        const btn    = document.createElement("button");
-        btn.style.cssText = `background:transparent;border:1px solid ${color}33;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;color:${color};cursor:pointer;white-space:nowrap;`;
-        btn.textContent   = `▶ ${s.icon} ${label}`;
-        btn.onclick       = () => loadAndRun(id, variant);
-        pairWrap.appendChild(btn);
+      [["close","#34D399","Good"],["degraded","#F87171","Degraded"]].forEach(([v,c,l]) => {
+        const btn = document.createElement("button");
+        btn.className = "quick-btn";
+        btn.style.cssText = `border-color:${c}33;color:${c}`;
+        btn.textContent = `▶ ${s.icon} ${l}`;
+        btn.onclick = () => loadAndRun(id, v);
+        col.appendChild(btn);
       });
     });
-    container.appendChild(pairWrap);
+    container.appendChild(col);
 
   } catch(e) {
-    container.innerHTML = `<div style="font-size:12px;color:#f87171;">Failed to load samples: ${e.message}</div>`;
+    container.innerHTML = `<div style="font-size:12px;color:var(--red);">Failed to load samples: ${e.message}</div>`;
   }
 }
 
 async function loadSample(sampleId, variant, target) {
   try {
-    const res  = await fetch(`/api/samples/${sampleId}/${variant}`);
-    const data = await res.json();
+    const data = await fetch(`/api/samples/${sampleId}/${variant}`).then(r => r.json());
     const html = data.html;
-
-    if (target === "ref") {
-      // Switch to HTML tab in reference panel
-      document.querySelectorAll('.tab[data-panel="ref"]').forEach(t => t.classList.remove("active"));
-      document.querySelector('.tab[data-panel="ref"][data-tab="html"]').classList.add("active");
-      document.querySelectorAll('#panel-ref .tab-pane').forEach(p => p.classList.remove("active"));
-      document.getElementById("ref-html").classList.add("active");
-      document.getElementById("ref-html-input").value = html;
-    } else {
-      // Switch to HTML tab in impl panel
-      document.querySelectorAll('.tab[data-panel="impl"]').forEach(t => t.classList.remove("active"));
-      document.querySelector('.tab[data-panel="impl"][data-tab="html"]').classList.add("active");
-      document.querySelectorAll('#panel-impl .tab-pane').forEach(p => p.classList.remove("active"));
-      document.getElementById("impl-html").classList.add("active");
-      document.getElementById("impl-html-input").value = html;
-    }
-
-    // Visual flash on the input
-    const ta = target === "ref" ? document.getElementById("ref-html-input") : document.getElementById("impl-html-input");
-    ta.style.borderColor = target === "ref" ? "#60a5fa" : "#4ade80";
-    setTimeout(() => { ta.style.borderColor = ""; }, 800);
-
-  } catch(e) {
-    showError("Failed to load sample: " + e.message);
-  }
+    const panelId = `${target}-html`;
+    const tabSel  = `.tab[data-panel="${target}"][data-tab="html"]`;
+    document.querySelectorAll(`.tab[data-panel="${target}"]`).forEach(t => t.classList.remove("active"));
+    document.querySelector(tabSel).classList.add("active");
+    document.querySelectorAll(`#panel-${target} .tab-pane`).forEach(p => p.classList.remove("active"));
+    document.getElementById(panelId).classList.add("active");
+    const ta = document.getElementById(`${target}-html-input`);
+    ta.value = html;
+    const flashColor = target === "ref" ? "#60A5FA" : "#34D399";
+    ta.style.borderColor = flashColor;
+    setTimeout(() => { ta.style.borderColor = ""; }, 700);
+  } catch(e) { showError("Failed to load sample: " + e.message); }
 }
 
 async function loadAndRun(sampleId, variant) {
-  // Load reference + chosen variant then run
-  await loadSample(sampleId, "reference", "ref");
-  await loadSample(sampleId, variant,     "impl");
-  // Tiny delay so textarea values settle
-  setTimeout(() => runEval(), 100);
+  await loadSample(sampleId,"reference","ref");
+  await loadSample(sampleId,variant,"impl");
+  setTimeout(() => runEval(), 120);
 }
 
-// Load samples on page init
 loadSampleLibrary();
 
-// ── Reset ─────────────────────────────────────────────────────────────────
+/* ══════════════════════════════════════════
+   RESET
+══════════════════════════════════════════ */
 function resetAll() {
   clearRef();
-  document.getElementById("ref-figma-url").value  = "";
-  document.getElementById("ref-html-input").value = "";
-  document.getElementById("impl-url-input").value  = "";
-  document.getElementById("impl-html-input").value = "";
+  ["ref-figma-url","ref-html-input","impl-url-input","impl-html-input"].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = "";
+  });
   document.getElementById("progress-section").style.display = "none";
   document.getElementById("results-section").style.display  = "none";
   hideError();
-  setProgress(0, "");
+  setProgress(0,"");
 }
 </script>
 </body>
