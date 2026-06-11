@@ -51,6 +51,16 @@ API_BASE  = os.environ.get("API_BASE", "http://10.69.141.113:8023")
 VLM_MODEL = "gpt-4o"
 VIEWPORT  = {"width": 1280, "height": 900}
 
+# Platform viewports
+VIEWPORTS = {
+    "desktop":        {"width": 1280, "height": 900},
+    "android_phone":  {"width": 390,  "height": 844},
+    "android_tablet": {"width": 768,  "height": 1024},
+}
+
+# ADB binary (installed on remote server)
+ADB_PATH = os.path.expanduser("~/platform-tools/adb")
+
 # Demo app credentials (for auth testing)
 DEMO_USER = "demo"
 DEMO_PASS = "demo123"
@@ -250,6 +260,28 @@ async def list_samples():
     return list(SAMPLE_META.values())
 
 
+@app.get("/api/devices")
+async def list_devices():
+    """Return connected ADB devices (requires ADB installed at ADB_PATH)."""
+    import subprocess
+    try:
+        result = subprocess.run(
+            [ADB_PATH, "devices"], capture_output=True, text=True, timeout=10
+        )
+        lines = result.stdout.strip().split("\n")[1:]  # skip "List of devices" header
+        devices = []
+        for line in lines:
+            line = line.strip()
+            if line and "\t" in line:
+                device_id, status = line.split("\t", 1)
+                devices.append({"id": device_id.strip(), "status": status.strip()})
+        return {"devices": devices}
+    except FileNotFoundError:
+        return {"devices": [], "error": f"ADB not found at {ADB_PATH}"}
+    except Exception as e:
+        return {"devices": [], "error": str(e)}
+
+
 @app.get("/api/samples/{sample_id}/{variant}")
 async def get_sample(sample_id: str, variant: str):
     from fastapi import HTTPException
@@ -275,15 +307,19 @@ async def evaluate(
     ref_url:          Optional[str]          = Form(None),
     ref_figma_token:  Optional[str]          = Form(None),  # Figma PAT
     # ── Implementation inputs ─────────────────────────────────────────────────
-    impl_type:        str                    = Form(...),  # "url"|"html"
+    impl_type:        str                    = Form(...),  # "url"|"html"|"adb"|"android_upload"
     impl_url:         Optional[str]          = Form(None),
     impl_html:        Optional[str]          = Form(None),
+    impl_adb_device:  Optional[str]          = Form(None),  # ADB device serial
+    impl_android_image: Optional[UploadFile] = File(None),  # direct Android screenshot upload
     # ── Auth config for implementation URL ───────────────────────────────────
     impl_auth_type:   Optional[str]          = Form(None),  # "none"|"form"|"cookies"|"basic"
     impl_auth_user:   Optional[str]          = Form(None),
     impl_auth_pass:   Optional[str]          = Form(None),
     impl_auth_cookies:Optional[str]          = Form(None),  # "name=val; name2=val2"
     impl_auth_target: Optional[str]          = Form(None),  # URL to reach after auth
+    # ── Platform / viewport ───────────────────────────────────────────────────
+    platform:         Optional[str]          = Form("desktop"),  # "desktop"|"android_phone"|"android_tablet"
 ):
     job_id = str(uuid.uuid4())
     q: asyncio.Queue = asyncio.Queue()
@@ -293,6 +329,10 @@ async def evaluate(
     if ref_image:
         ref_image_bytes = await ref_image.read()
 
+    android_image_bytes: Optional[bytes] = None
+    if impl_android_image:
+        android_image_bytes = await impl_android_image.read()
+
     auth_cfg = {
         "type":    impl_auth_type or "none",
         "user":    impl_auth_user or "",
@@ -301,10 +341,13 @@ async def evaluate(
         "target":  impl_auth_target or "",
     }
 
+    vp = VIEWPORTS.get(platform or "desktop", VIEWPORTS["desktop"])
+
     asyncio.create_task(_run_evaluation(
         job_id, q,
         ref_type, ref_image_bytes, ref_html, ref_url, ref_figma_token,
-        impl_type, impl_url, impl_html, auth_cfg,
+        impl_type, impl_url, impl_html, impl_adb_device, android_image_bytes,
+        auth_cfg, vp, platform or "desktop",
     ))
     return {"job_id": job_id}
 
@@ -338,12 +381,15 @@ async def stream(job_id: str):
 async def _run_evaluation(
     job_id, q,
     ref_type, ref_image_bytes, ref_html, ref_url, ref_figma_token,
-    impl_type, impl_url, impl_html, auth_cfg,
+    impl_type, impl_url, impl_html, impl_adb_device, android_image_bytes,
+    auth_cfg, viewport, platform,
 ):
     async def emit(step, pct, msg, data=None):
         payload = {"type": "progress", "step": step, "pct": pct, "msg": msg}
         if data: payload.update(data)
         await q.put(payload)
+
+    is_mobile = platform in ("android_phone", "android_tablet")
 
     try:
         loop = asyncio.get_event_loop()
@@ -355,9 +401,10 @@ async def _run_evaluation(
 
         if ref_type == "upload" and ref_image_bytes:
             img = Image.open(io.BytesIO(ref_image_bytes)).convert("RGB")
-            if img.width > VIEWPORT["width"]:
-                r = VIEWPORT["width"] / img.width
-                img = img.resize((VIEWPORT["width"], int(img.height * r)), Image.LANCZOS)
+            max_w = viewport["width"]
+            if img.width > max_w:
+                r = max_w / img.width
+                img = img.resize((max_w, int(img.height * r)), Image.LANCZOS)
             img.save(str(ref_ss), "PNG")
 
         elif ref_type in ("figma", "url") and ref_url:
@@ -365,16 +412,15 @@ async def _run_evaluation(
                 await emit("reference", 10, "Fetching Figma frame via REST API …")
                 await loop.run_in_executor(None, _screenshot_figma, ref_url, ref_figma_token, ref_ss)
             elif ref_type == "figma" and not ref_figma_token:
-                # Fall back to Playwright screenshot (works for publicly shared Figma)
                 await emit("reference", 10, "Screenshotting Figma URL (no token, may be partial) …")
-                await loop.run_in_executor(None, _screenshot_url, ref_url, ref_ss)
+                await loop.run_in_executor(None, _screenshot_url, ref_url, ref_ss, viewport)
             else:
-                await loop.run_in_executor(None, _screenshot_url, ref_url, ref_ss)
+                await loop.run_in_executor(None, _screenshot_url, ref_url, ref_ss, viewport)
 
         elif ref_type == "html" and ref_html:
             with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
                 f.write(ref_html); tmp = Path(f.name)
-            await loop.run_in_executor(None, _screenshot_file, tmp, ref_ss)
+            await loop.run_in_executor(None, _screenshot_file, tmp, ref_ss, viewport)
             tmp.unlink(missing_ok=True)
         else:
             await q.put({"type": "error", "msg": "Invalid reference input"}); return
@@ -383,15 +429,24 @@ async def _run_evaluation(
 
         # ── Step 2: Implementation ────────────────────────────────────────────
         auth_label = f" [{auth_cfg['type']} auth]" if auth_cfg["type"] != "none" else ""
-        await emit("impl", 25, f"Rendering implementation{auth_label} …")
+        plat_label = f" [{platform}]" if is_mobile else ""
+        await emit("impl", 25, f"Rendering implementation{plat_label}{auth_label} …")
 
-        if impl_type == "url" and impl_url:
+        if impl_type == "adb" and impl_adb_device:
+            await emit("impl", 30, f"Capturing ADB screenshot from device {impl_adb_device} …")
+            await loop.run_in_executor(None, _screenshot_adb, impl_adb_device, impl_ss)
+
+        elif impl_type == "android_upload" and android_image_bytes:
+            img = Image.open(io.BytesIO(android_image_bytes)).convert("RGB")
+            img.save(str(impl_ss), "PNG")
+
+        elif impl_type == "url" and impl_url:
             if auth_cfg["type"] == "none":
-                await loop.run_in_executor(None, _screenshot_url, impl_url, impl_ss)
+                await loop.run_in_executor(None, _screenshot_url, impl_url, impl_ss, viewport)
             else:
                 await emit("impl", 30, f"Auth agent starting ({auth_cfg['type']}) …")
                 result = await loop.run_in_executor(
-                    None, _screenshot_with_auth, impl_url, impl_ss, auth_cfg
+                    None, _screenshot_with_auth, impl_url, impl_ss, auth_cfg, viewport
                 )
                 if result.get("agent_log"):
                     await emit("impl", 38, result["agent_log"])
@@ -399,7 +454,7 @@ async def _run_evaluation(
         elif impl_type == "html" and impl_html:
             with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
                 f.write(impl_html); tmp = Path(f.name)
-            await loop.run_in_executor(None, _screenshot_file, tmp, impl_ss)
+            await loop.run_in_executor(None, _screenshot_file, tmp, impl_ss, viewport)
             tmp.unlink(missing_ok=True)
         else:
             await q.put({"type": "error", "msg": "Invalid implementation input"}); return
@@ -412,8 +467,9 @@ async def _run_evaluation(
         await emit("metrics", 65, "Pixel metrics done ✓", {"pixel": px})
 
         # ── Step 4: VLM judge ─────────────────────────────────────────────────
-        await emit("vlm", 70, f"Asking VLM judge ({VLM_MODEL}) …")
-        vlm = await loop.run_in_executor(None, _vlm_judge, ref_ss, impl_ss)
+        rubric = MOBILE_RUBRIC_PROMPT if is_mobile else RUBRIC_PROMPT
+        await emit("vlm", 70, f"Asking VLM judge ({VLM_MODEL}, {'mobile' if is_mobile else 'desktop'} rubric) …")
+        vlm = await loop.run_in_executor(None, _vlm_judge, ref_ss, impl_ss, rubric)
         await emit("vlm", 88, "VLM scoring done ✓", {"vlm": vlm})
 
         # ── Step 5: Composite ─────────────────────────────────────────────────
@@ -424,6 +480,8 @@ async def _run_evaluation(
             "pixel": px, "vlm": vlm,
             "ref_img": _img_url(ref_ss), "impl_img": _img_url(impl_ss),
             "auth_type": auth_cfg["type"],
+            "platform": platform,
+            "is_mobile": is_mobile,
         })
 
     except Exception as exc:
@@ -439,28 +497,49 @@ def _img_url(path: Path) -> str:
     return f"/screenshots/{path.name}"
 
 
-def _screenshot_url(url: str, out: Path):
+def _screenshot_url(url: str, out: Path, viewport: dict = None):
     """Plain screenshot — no auth."""
     from playwright.sync_api import sync_playwright
+    vp = viewport or VIEWPORT
     with sync_playwright() as p:
         b = p.chromium.launch()
-        pg = b.new_page(viewport=VIEWPORT)
+        pg = b.new_page(viewport=vp)
         pg.goto(url, wait_until="networkidle", timeout=30000)
         pg.wait_for_timeout(500)
         pg.screenshot(path=str(out), full_page=False)
         b.close()
 
 
-def _screenshot_file(html_path: Path, out: Path):
+def _screenshot_file(html_path: Path, out: Path, viewport: dict = None):
     from playwright.sync_api import sync_playwright
+    vp = viewport or VIEWPORT
     url = f"file://{html_path.resolve()}"
     with sync_playwright() as p:
         b = p.chromium.launch()
-        pg = b.new_page(viewport=VIEWPORT)
+        pg = b.new_page(viewport=vp)
         pg.goto(url, wait_until="networkidle")
         pg.wait_for_timeout(300)
         pg.screenshot(path=str(out), full_page=False)
         b.close()
+
+
+# ── ADB screenshot ────────────────────────────────────────────────────────────
+def _screenshot_adb(device_id: str, out: Path):
+    """Capture screenshot from an Android device via ADB."""
+    import subprocess
+    subprocess.run(
+        [ADB_PATH, "-s", device_id, "shell", "screencap", "-p", "/sdcard/_playground_ss.png"],
+        check=True, timeout=30, capture_output=True,
+    )
+    subprocess.run(
+        [ADB_PATH, "-s", device_id, "pull", "/sdcard/_playground_ss.png", str(out)],
+        check=True, timeout=30, capture_output=True,
+    )
+    # Clean up temp file on device
+    subprocess.run(
+        [ADB_PATH, "-s", device_id, "shell", "rm", "/sdcard/_playground_ss.png"],
+        timeout=10, capture_output=True,
+    )
 
 
 # ── Figma REST API screenshot ─────────────────────────────────────────────────
@@ -516,12 +595,13 @@ def _screenshot_figma(figma_url: str, token: str, out: Path):
 
 
 # ── Auth-aware screenshot (form / cookies / basic) ────────────────────────────
-def _screenshot_with_auth(url: str, out: Path, auth_cfg: dict) -> dict:
+def _screenshot_with_auth(url: str, out: Path, auth_cfg: dict, viewport: dict = None) -> dict:
     """
     Returns {"agent_log": str} with a description of what the agent did.
     """
     from playwright.sync_api import sync_playwright
 
+    vp        = viewport or VIEWPORT
     auth_type = auth_cfg["type"]
     user      = auth_cfg["user"]
     password  = auth_cfg["pass"]
@@ -533,7 +613,7 @@ def _screenshot_with_auth(url: str, out: Path, auth_cfg: dict) -> dict:
         # ── Cookie injection ──────────────────────────────────────────────────
         if auth_type == "cookies":
             browser = p.chromium.launch()
-            ctx     = browser.new_context(viewport=VIEWPORT)
+            ctx     = browser.new_context(viewport=vp)
             parsed  = urllib.parse.urlparse(url)
             base_url = f"{parsed.scheme}://{parsed.netloc}"
             cookie_list = []
@@ -554,7 +634,7 @@ def _screenshot_with_auth(url: str, out: Path, auth_cfg: dict) -> dict:
         # ── HTTP Basic auth ───────────────────────────────────────────────────
         elif auth_type == "basic":
             browser = p.chromium.launch()
-            ctx     = browser.new_context(viewport=VIEWPORT,
+            ctx     = browser.new_context(viewport=vp,
                                           http_credentials={"username": user, "password": password})
             pg      = ctx.new_page()
             pg.goto(target, wait_until="networkidle", timeout=30000)
@@ -566,7 +646,7 @@ def _screenshot_with_auth(url: str, out: Path, auth_cfg: dict) -> dict:
         # ── Form auth (VLM agent) ─────────────────────────────────────────────
         elif auth_type == "form":
             browser = p.chromium.launch()
-            ctx     = browser.new_context(viewport=VIEWPORT)
+            ctx     = browser.new_context(viewport=vp)
             pg      = ctx.new_page()
 
             # Navigate to the login URL
@@ -709,6 +789,30 @@ def _pixel_metrics(ref_p: Path, cmp_p: Path) -> dict:
     }
 
 
+MOBILE_RUBRIC_PROMPT = """You are a mobile UI/UX design quality evaluator. You are given two screenshots:
+  IMAGE 1: The REFERENCE DESIGN (golden standard — could be a Figma mockup or design screenshot).
+  IMAGE 2: A MOBILE APP IMPLEMENTATION to evaluate.
+
+Score the implementation on EACH of the 5 mobile dimensions below from 0-20 (total = 100):
+
+1. **App Bar & Navigation** (0-20): Top app bar height/style, title, back/action icons, bottom navigation bar or tab bar presence and accuracy.
+2. **Touch Targets & Spacing** (0-20): Minimum 44dp-equivalent tap targets, comfortable spacing between interactive elements, no overlapping or tiny controls.
+3. **Typography & Readability** (0-20): Font sizes appropriate for mobile (min ~14sp body), contrast ratios, line heights, heading hierarchy.
+4. **Layout & Responsiveness** (0-20): Single-column flow, full-width use, no horizontal overflow, proper safe-area/padding at edges, scrollable lists.
+5. **Component Fidelity** (0-20): Accuracy of Material Design / iOS HIG components — cards, FAB, chips, dialogs, bottom sheets, loading states.
+
+Respond ONLY with valid JSON — no extra text:
+{
+  "app_bar_navigation":  <0-20>,
+  "touch_targets":       <0-20>,
+  "typography":          <0-20>,
+  "layout_responsive":   <0-20>,
+  "component_fidelity":  <0-20>,
+  "total":               <0-100>,
+  "summary":             "<2-3 sentence verdict on the biggest wins and gaps for mobile>"
+}"""
+
+
 RUBRIC_PROMPT = """You are a UI/UX design quality evaluator. You are given two screenshots:
   IMAGE 1: The REFERENCE DESIGN (the golden standard).
   IMAGE 2: A CODE IMPLEMENTATION to evaluate against the reference.
@@ -737,9 +841,10 @@ def _encode(path: Path) -> str:
     return base64.b64encode(path.read_bytes()).decode()
 
 
-def _vlm_judge(ref_p: Path, cmp_p: Path) -> dict:
+def _vlm_judge(ref_p: Path, cmp_p: Path, rubric_prompt: str = None) -> dict:
+    prompt = rubric_prompt or RUBRIC_PROMPT
     messages = [{"role": "user", "content": [
-        {"type": "text",      "text": RUBRIC_PROMPT},
+        {"type": "text",      "text": prompt},
         {"type": "text",      "text": "IMAGE 1 — REFERENCE DESIGN:"},
         {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{_encode(ref_p)}"}},
         {"type": "text",      "text": "IMAGE 2 — IMPLEMENTATION TO EVALUATE:"},

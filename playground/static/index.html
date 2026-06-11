@@ -596,6 +596,53 @@ textarea { min-height: 140px; font-family: "SF Mono", "Fira Code", monospace; fo
 .variant-btn.close .vdot { background: #4ade80; }
 .variant-btn.bad   .vdot { background: #f87171; }
 
+/* ── Platform toggle ─────────────────────────────────────────────────────── */
+.platform-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 22px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.platform-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.8px; color: var(--muted); margin-right: 4px;
+}
+.platform-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600;
+  border: 1px solid var(--border); background: var(--surface2);
+  color: var(--muted); cursor: pointer;
+  transition: all .15s;
+}
+.platform-btn:hover { border-color: var(--border2); color: var(--text); }
+.platform-btn.active { background: rgba(99,102,241,.15); border-color: var(--accent); color: var(--accent2); }
+.platform-viewport-hint { margin-left: auto; font-size: 11px; color: var(--muted); }
+
+/* ── Phone frame ─────────────────────────────────────────────────────────── */
+.phone-frame-wrap {
+  display: none;
+  justify-content: center;
+  padding: 16px 0;
+}
+.phone-frame-wrap.visible { display: flex; }
+.phone-frame {
+  position: relative;
+  border: 3px solid #334155;
+  border-radius: 32px;
+  overflow: hidden;
+  box-shadow: 0 0 0 6px #1e293b, 0 20px 40px rgba(0,0,0,.5);
+  background: #000;
+  max-width: 390px;
+  width: 100%;
+}
+.phone-notch {
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 100px; height: 22px; background: #334155; border-radius: 0 0 14px 14px;
+  z-index: 10;
+}
+.phone-frame img { display: block; width: 100%; }
+
 /* ── Footer ──────────────────────────────────────────────────────────────── */
 footer {
   border-top: 1px solid var(--border);
@@ -646,6 +693,24 @@ footer span { color: #475569; }
     </div>
   </div>
 
+  <!-- Platform toggle -->
+  <div class="platform-row">
+    <span class="platform-label">Platform</span>
+    <button class="platform-btn active" data-platform="desktop" onclick="setPlatform('desktop',this)">
+      <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 21h8M12 17v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      Desktop
+    </button>
+    <button class="platform-btn" data-platform="android_phone" onclick="setPlatform('android_phone',this)">
+      <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="3" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="18" r="1" fill="currentColor"/></svg>
+      Android Phone
+    </button>
+    <button class="platform-btn" data-platform="android_tablet" onclick="setPlatform('android_tablet',this)">
+      <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="18" rx="3" stroke="currentColor" stroke-width="2"/><circle cx="19" cy="12" r="1" fill="currentColor"/></svg>
+      Android Tablet
+    </button>
+    <span class="platform-viewport-hint" id="viewport-hint">1280 × 900 px &nbsp;·&nbsp; Desktop rubric</span>
+  </div>
+
   <!-- Input panels -->
   <div class="input-row">
 
@@ -665,7 +730,7 @@ footer span { color: #475569; }
         <!-- Upload tab -->
         <div class="tab-pane active" id="ref-upload">
           <div class="drop-zone" id="drop-zone"
-               ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropFile(event)">
+               ondragover="dragOver(event,'drop-zone')" ondragleave="dragLeave(event,'drop-zone')" ondrop="dropFile(event)">
             <input type="file" id="ref-file-input" accept="image/*" onchange="fileSelected(event)"/>
             <div class="drop-icon">
               <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
@@ -733,6 +798,7 @@ footer span { color: #475569; }
         <div class="tabs">
           <div class="tab active" data-panel="impl" data-tab="url">Live URL</div>
           <div class="tab"        data-panel="impl" data-tab="html">HTML Paste</div>
+          <div class="tab"        data-panel="impl" data-tab="android" id="tab-android" style="display:none;">Android</div>
         </div>
       </div>
       <div class="panel-body">
@@ -846,6 +912,78 @@ footer span { color: #475569; }
           <label class="field-label" for="impl-html-input">Paste implementation HTML</label>
           <textarea id="impl-html-input" placeholder="<!DOCTYPE html>&#10;<html>…"></textarea>
         </div>
+
+        <!-- Android tab -->
+        <div class="tab-pane" id="impl-android">
+          <!-- Sub-mode selector -->
+          <div class="auth-type-row" style="margin-bottom:14px;">
+            <button class="auth-type-btn active" data-atype="upload"  onclick="setAndroidMode('upload',this)">
+              <svg width="11" height="11" fill="none" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Upload Screenshot
+            </button>
+            <button class="auth-type-btn" data-atype="adb" onclick="setAndroidMode('adb',this)">
+              <svg width="11" height="11" fill="none" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="3" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="18" r="1" fill="currentColor"/></svg>
+              ADB Device
+            </button>
+            <button class="auth-type-btn" data-atype="mobile_url" onclick="setAndroidMode('mobile_url',this)">
+              <svg width="11" height="11" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 8v4l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              Mobile URL
+            </button>
+          </div>
+
+          <!-- Upload sub-pane -->
+          <div id="android-upload-pane">
+            <div class="drop-zone" id="android-drop-zone"
+                 ondragover="dragOver(event,'android-drop-zone')" ondragleave="dragLeave(event,'android-drop-zone')" ondrop="dropAndroid(event)">
+              <input type="file" id="android-file-input" accept="image/*" onchange="androidFileSelected(event)"/>
+              <div class="drop-icon">
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
+                  <rect x="5" y="2" width="14" height="20" rx="3" stroke="#6366f1" stroke-width="2"/>
+                  <circle cx="12" cy="18" r="1" fill="#6366f1"/>
+                </svg>
+              </div>
+              <div class="drop-title">Drop Android screenshot</div>
+              <div class="drop-sub">PNG, JPG &nbsp;·&nbsp; <span>browse files</span></div>
+            </div>
+            <div class="drop-preview" id="android-preview">
+              <img id="android-preview-img" src="" alt=""/>
+              <button class="remove-btn" onclick="clearAndroid()">×</button>
+            </div>
+            <div class="auth-hint" style="margin-top:8px;">
+              <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="3" stroke="#6366f1" stroke-width="2"/></svg>
+              Take a screenshot on your Android device (Power + Volume Down) and upload here.
+            </div>
+          </div>
+
+          <!-- ADB sub-pane -->
+          <div id="android-adb-pane" style="display:none;">
+            <label class="field-label">Connected Devices</label>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <select id="adb-device-select" style="flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;font-size:13px;color:var(--text);outline:none;">
+                <option value="">Loading devices…</option>
+              </select>
+              <button onclick="refreshDevices()" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;color:var(--muted);cursor:pointer;font-size:12px;white-space:nowrap;">
+                ↺ Refresh
+              </button>
+            </div>
+            <div id="adb-device-status" style="font-size:11px;color:var(--muted);margin-top:6px;"></div>
+            <div class="auth-hint" style="margin-top:10px;">
+              <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="3" stroke="#6366f1" stroke-width="2"/></svg>
+              Enable USB Debugging on the device (Settings → Developer Options → USB Debugging) and connect via USB. ADB over Wi-Fi also works — connect first with <code style="font-family:monospace;color:var(--accent2);">adb connect IP:5555</code>.
+            </div>
+          </div>
+
+          <!-- Mobile URL sub-pane -->
+          <div id="android-url-pane" style="display:none;">
+            <label class="field-label" for="android-url-input">Web page URL (rendered at mobile viewport)</label>
+            <input type="url" id="android-url-input" placeholder="https://your-app.com/page"/>
+            <div class="auth-hint" style="margin-top:8px;">
+              <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="3" stroke="#6366f1" stroke-width="2"/></svg>
+              Playwright will render this URL at the selected Android viewport (390×844 or 768×1024).
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -927,15 +1065,24 @@ footer span { color: #475569; }
     </div>
 
     <!-- Screenshot comparison (with diff slider) -->
-    <div class="compare-row">
-      <div class="compare-panel">
+    <div class="compare-row" id="compare-row">
+      <!-- Desktop view (default) -->
+      <div class="compare-panel" id="ref-compare-panel">
         <div class="compare-header">
           <span class="compare-label">Reference Design</span>
-          <span style="font-size:11px;color:var(--muted);">Golden standard</span>
+          <span style="font-size:11px;color:var(--muted);" id="ref-compare-label">Golden standard</span>
         </div>
+        <!-- Desktop: plain image -->
         <img id="ref-result-img" src="" alt="Reference"/>
+        <!-- Mobile: phone frame -->
+        <div class="phone-frame-wrap" id="ref-phone-wrap">
+          <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <img id="ref-result-img-mobile" src="" alt="Reference (mobile)"/>
+          </div>
+        </div>
       </div>
-      <div class="compare-panel">
+      <div class="compare-panel" id="impl-compare-panel">
         <div class="compare-header">
           <span class="compare-label">Implementation</span>
           <span style="font-size:11px;color:var(--muted);">Drag to compare →</span>
@@ -946,37 +1093,76 @@ footer span { color: #475569; }
           <img class="diff-img diff-img-ref"  id="diff-ref-img"    src="" alt="Reference overlay"/>
           <div class="diff-handle" id="diff-handle"></div>
         </div>
+        <!-- Mobile phone frame overlay -->
+        <div class="phone-frame-wrap" id="impl-phone-wrap" style="display:none;">
+          <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <img id="impl-result-img-mobile" src="" alt="Implementation (mobile)"/>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- VLM dimension bars -->
     <div class="dim-section">
-      <div class="dim-section-title">VLM Rubric Breakdown</div>
+      <div class="dim-section-title" id="rubric-title">VLM Rubric Breakdown</div>
 
-      <div class="dim-row">
-        <span class="dim-name">Layout &amp; Structure</span>
-        <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-layout" style="width:0%"></div></div>
-        <span class="dim-score" id="score-layout">—</span>
+      <!-- Desktop rubric dimensions -->
+      <div id="desktop-rubric">
+        <div class="dim-row">
+          <span class="dim-name">Layout &amp; Structure</span>
+          <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-layout" style="width:0%"></div></div>
+          <span class="dim-score" id="score-layout">—</span>
+        </div>
+        <div class="dim-row">
+          <span class="dim-name">Typography</span>
+          <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-typo" style="width:0%"></div></div>
+          <span class="dim-score" id="score-typo">—</span>
+        </div>
+        <div class="dim-row">
+          <span class="dim-name">Color &amp; Visual Style</span>
+          <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-color" style="width:0%"></div></div>
+          <span class="dim-score" id="score-color">—</span>
+        </div>
+        <div class="dim-row">
+          <span class="dim-name">Component Fidelity</span>
+          <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-comp" style="width:0%"></div></div>
+          <span class="dim-score" id="score-comp">—</span>
+        </div>
+        <div class="dim-row">
+          <span class="dim-name">Spacing &amp; Alignment</span>
+          <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-space" style="width:0%"></div></div>
+          <span class="dim-score" id="score-space">—</span>
+        </div>
       </div>
-      <div class="dim-row">
-        <span class="dim-name">Typography</span>
-        <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-typo" style="width:0%"></div></div>
-        <span class="dim-score" id="score-typo">—</span>
-      </div>
-      <div class="dim-row">
-        <span class="dim-name">Color &amp; Visual Style</span>
-        <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-color" style="width:0%"></div></div>
-        <span class="dim-score" id="score-color">—</span>
-      </div>
-      <div class="dim-row">
-        <span class="dim-name">Component Fidelity</span>
-        <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-comp" style="width:0%"></div></div>
-        <span class="dim-score" id="score-comp">—</span>
-      </div>
-      <div class="dim-row">
-        <span class="dim-name">Spacing &amp; Alignment</span>
-        <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-space" style="width:0%"></div></div>
-        <span class="dim-score" id="score-space">—</span>
+
+      <!-- Mobile rubric dimensions -->
+      <div id="mobile-rubric" style="display:none;">
+        <div class="dim-row">
+          <span class="dim-name">App Bar &amp; Navigation</span>
+          <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-appbar" style="width:0%"></div></div>
+          <span class="dim-score" id="score-appbar">—</span>
+        </div>
+        <div class="dim-row">
+          <span class="dim-name">Touch Targets</span>
+          <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-touch" style="width:0%"></div></div>
+          <span class="dim-score" id="score-touch">—</span>
+        </div>
+        <div class="dim-row">
+          <span class="dim-name">Typography</span>
+          <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-mtypo" style="width:0%"></div></div>
+          <span class="dim-score" id="score-mtypo">—</span>
+        </div>
+        <div class="dim-row">
+          <span class="dim-name">Layout &amp; Responsive</span>
+          <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-mlay" style="width:0%"></div></div>
+          <span class="dim-score" id="score-mlay">—</span>
+        </div>
+        <div class="dim-row">
+          <span class="dim-name">Component Fidelity</span>
+          <div class="dim-bar-bg"><div class="dim-bar-fill" id="bar-mcomp" style="width:0%"></div></div>
+          <span class="dim-score" id="score-mcomp">—</span>
+        </div>
       </div>
 
       <div class="summary-box" id="summary-box"></div>
@@ -995,6 +1181,114 @@ footer span { color: #475569; }
 </footer>
 
 <script>
+// ── Platform toggle ──────────────────────────────────────────────────────
+let currentPlatform = "desktop";
+const VIEWPORT_INFO = {
+  desktop:        { label: "1280 × 900 px · Desktop rubric" },
+  android_phone:  { label: "390 × 844 px · Mobile rubric (phone)" },
+  android_tablet: { label: "768 × 1024 px · Mobile rubric (tablet)" },
+};
+const IS_MOBILE_PLATFORM = p => p === "android_phone" || p === "android_tablet";
+
+function setPlatform(platform, btn) {
+  currentPlatform = platform;
+  document.querySelectorAll(".platform-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  document.getElementById("viewport-hint").textContent = VIEWPORT_INFO[platform]?.label || "";
+
+  // Show/hide Android tab in impl panel
+  const androidTab = document.getElementById("tab-android");
+  if (IS_MOBILE_PLATFORM(platform)) {
+    androidTab.style.display = "";
+  } else {
+    androidTab.style.display = "none";
+    // If android tab is currently active, switch back to URL tab
+    if (document.querySelector('.tab[data-panel="impl"][data-tab="android"]')?.classList.contains("active")) {
+      document.querySelector('.tab[data-panel="impl"][data-tab="url"]').click();
+    }
+  }
+}
+
+// ── Android sub-modes ────────────────────────────────────────────────────
+let currentAndroidMode = "upload";
+let androidImageFile   = null;
+
+function setAndroidMode(mode, btn) {
+  currentAndroidMode = mode;
+  document.querySelectorAll("#impl-android .auth-type-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  document.getElementById("android-upload-pane").style.display  = mode === "upload"     ? "block" : "none";
+  document.getElementById("android-adb-pane").style.display     = mode === "adb"        ? "block" : "none";
+  document.getElementById("android-url-pane").style.display     = mode === "mobile_url" ? "block" : "none";
+  if (mode === "adb") refreshDevices();
+}
+
+function dragOver(e, zoneId) {
+  e.preventDefault();
+  document.getElementById(zoneId)?.classList.add("drag-over");
+}
+function dragLeave(e, zoneId) {
+  document.getElementById(zoneId)?.classList.remove("drag-over");
+}
+function dropAndroid(e) {
+  e.preventDefault();
+  dragLeave(e, "android-drop-zone");
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith("image/")) setAndroidFile(f);
+}
+function androidFileSelected(e) {
+  const f = e.target.files[0];
+  if (f) setAndroidFile(f);
+}
+function setAndroidFile(f) {
+  androidImageFile = f;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById("android-preview-img").src = ev.target.result;
+    document.getElementById("android-preview").style.display = "block";
+    document.getElementById("android-drop-zone").style.display = "none";
+  };
+  reader.readAsDataURL(f);
+}
+function clearAndroid() {
+  androidImageFile = null;
+  document.getElementById("android-preview").style.display = "none";
+  document.getElementById("android-drop-zone").style.display = "";
+  document.getElementById("android-file-input").value = "";
+}
+
+async function refreshDevices() {
+  const sel    = document.getElementById("adb-device-select");
+  const status = document.getElementById("adb-device-status");
+  sel.innerHTML = "<option value=''>Loading…</option>";
+  status.textContent = "";
+  try {
+    const res  = await fetch("/api/devices");
+    const data = await res.json();
+    if (data.error) {
+      sel.innerHTML = "<option value=''>ADB not available</option>";
+      status.textContent = "Error: " + data.error;
+      return;
+    }
+    const online = data.devices.filter(d => d.status === "device");
+    if (online.length === 0) {
+      sel.innerHTML = "<option value=''>No devices found</option>";
+      status.textContent = "Connect an Android device via USB or run: adb connect IP:5555";
+    } else {
+      sel.innerHTML = online.map(d => `<option value="${d.id}">${d.id}</option>`).join("");
+      status.textContent = `${online.length} device(s) online`;
+    }
+    // Also list offline devices as disabled options
+    const offline = data.devices.filter(d => d.status !== "device");
+    offline.forEach(d => {
+      sel.innerHTML += `<option value="" disabled>${d.id} (${d.status})</option>`;
+    });
+  } catch(e) {
+    sel.innerHTML = "<option value=''>Error</option>";
+    status.textContent = e.message;
+  }
+}
+
 // ── Auth accordion ───────────────────────────────────────────────────────
 let currentAuthType = "none";
 
@@ -1033,16 +1327,9 @@ document.querySelectorAll(".tab").forEach(tab => {
 // ── Drag & drop ───────────────────────────────────────────────────────────
 let refImageFile = null;
 
-function dragOver(e) {
-  e.preventDefault();
-  document.getElementById("drop-zone").classList.add("drag-over");
-}
-function dragLeave(e) {
-  document.getElementById("drop-zone").classList.remove("drag-over");
-}
 function dropFile(e) {
   e.preventDefault();
-  dragLeave(e);
+  dragLeave(e, "drop-zone");
   const f = e.dataTransfer.files[0];
   if (f && f.type.startsWith("image/")) setRefFile(f);
 }
@@ -1103,6 +1390,7 @@ async function runEval() {
   const fd = new FormData();
   fd.append("ref_type",  refTab);
   fd.append("impl_type", implTab);
+  fd.append("platform",  currentPlatform);
 
   // Reference
   if (refTab === "upload") {
@@ -1142,10 +1430,28 @@ async function runEval() {
       fd.append("impl_auth_user", document.getElementById("auth-basic-user").value.trim());
       fd.append("impl_auth_pass", document.getElementById("auth-basic-pass").value);
     }
-  } else {
+  } else if (implTab === "html") {
     const v = document.getElementById("impl-html-input").value.trim();
     if (!v) { showError("Please paste implementation HTML."); return; }
     fd.append("impl_html", v);
+  } else if (implTab === "android") {
+    if (currentAndroidMode === "upload") {
+      if (!androidImageFile) { showError("Please upload an Android screenshot."); return; }
+      fd.set("impl_type", "android_upload");
+      fd.append("impl_android_image", androidImageFile);
+    } else if (currentAndroidMode === "adb") {
+      const deviceId = document.getElementById("adb-device-select").value;
+      if (!deviceId) { showError("Please select an ADB device."); return; }
+      fd.set("impl_type", "adb");
+      fd.append("impl_adb_device", deviceId);
+    } else if (currentAndroidMode === "mobile_url") {
+      const v = document.getElementById("android-url-input").value.trim();
+      if (!v) { showError("Please enter a URL for mobile rendering."); return; }
+      fd.set("impl_type", "url");
+      fd.append("impl_url", v);
+    }
+  } else {
+    showError("Unknown implementation type."); return;
   }
 
   // UI: loading state
@@ -1251,33 +1557,59 @@ function showResults(data) {
   document.getElementById("mc-pm20").textContent  = data.pixel.pixel_match_20 + "%";
   document.getElementById("mc-vlm").textContent   = (data.vlm?.total ?? "—") + "/100";
 
-  // Screenshots
+  // Screenshots + phone frame toggle
+  const isMobile = data.is_mobile;
   if (data.ref_img) {
     document.getElementById("ref-result-img").src  = data.ref_img;
+    document.getElementById("ref-result-img-mobile").src = data.ref_img;
     document.getElementById("diff-ref-img").src    = data.ref_img;
   }
   if (data.impl_img) {
     document.getElementById("impl-result-img").src = data.impl_img;
+    document.getElementById("impl-result-img-mobile").src = data.impl_img;
   }
 
-  // Dimension bars
-  const dims = [
-    ["layout",  "layout_structure",   "bar-layout", "score-layout"],
-    ["typo",    "typography",          "bar-typo",   "score-typo"],
-    ["color",   "color_visual_style",  "bar-color",  "score-color"],
-    ["comp",    "component_fidelity",  "bar-comp",   "score-comp"],
-    ["space",   "spacing_alignment",   "bar-space",  "score-space"],
-  ];
-  dims.forEach(([, key, barId, scoreId]) => {
-    const val = data.vlm?.[key] ?? 0;
+  // Phone frame visibility
+  document.getElementById("ref-result-img").style.display  = isMobile ? "none" : "";
+  document.getElementById("ref-phone-wrap").classList.toggle("visible", isMobile);
+  // For the diff slider: on mobile show phone frame below, hide slider
+  document.getElementById("diff-slider").style.display      = isMobile ? "none" : "";
+  document.getElementById("impl-phone-wrap").style.display  = isMobile ? "flex" : "none";
+  document.getElementById("ref-compare-label").textContent  = isMobile ? "Mobile design" : "Golden standard";
+
+  // VLM rubric panels
+  const isMobileResult = isMobile;
+  document.getElementById("desktop-rubric").style.display = isMobileResult ? "none" : "";
+  document.getElementById("mobile-rubric").style.display  = isMobileResult ? "block" : "none";
+  document.getElementById("rubric-title").textContent =
+    isMobileResult ? "VLM Mobile Rubric Breakdown" : "VLM Rubric Breakdown";
+
+  function renderBar(barId, scoreId, val) {
     const pct = val / 20 * 100;
     const col = pct >= 70 ? "#6366f1" : pct >= 40 ? "#f59e0b" : "#ef4444";
     const bar = document.getElementById(barId);
+    if (!bar) return;
     bar.style.width      = pct + "%";
     bar.style.background = col;
     document.getElementById(scoreId).textContent = val + "/20";
     document.getElementById(scoreId).style.color = col;
-  });
+  }
+
+  if (isMobileResult) {
+    // Mobile dimensions
+    renderBar("bar-appbar", "score-appbar", data.vlm?.app_bar_navigation ?? 0);
+    renderBar("bar-touch",  "score-touch",  data.vlm?.touch_targets ?? 0);
+    renderBar("bar-mtypo",  "score-mtypo",  data.vlm?.typography ?? 0);
+    renderBar("bar-mlay",   "score-mlay",   data.vlm?.layout_responsive ?? 0);
+    renderBar("bar-mcomp",  "score-mcomp",  data.vlm?.component_fidelity ?? 0);
+  } else {
+    // Desktop dimensions
+    renderBar("bar-layout", "score-layout", data.vlm?.layout_structure ?? 0);
+    renderBar("bar-typo",   "score-typo",   data.vlm?.typography ?? 0);
+    renderBar("bar-color",  "score-color",  data.vlm?.color_visual_style ?? 0);
+    renderBar("bar-comp",   "score-comp",   data.vlm?.component_fidelity ?? 0);
+    renderBar("bar-space",  "score-space",  data.vlm?.spacing_alignment ?? 0);
+  }
 
   // Summary
   document.getElementById("summary-box").textContent = data.vlm?.summary || "";
