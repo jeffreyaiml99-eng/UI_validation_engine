@@ -47,8 +47,8 @@ SS_DIR      = BASE_DIR / "screenshots"
 SAMPLES_DIR = BASE_DIR / "samples"
 SS_DIR.mkdir(exist_ok=True)
 
-API_BASE  = os.environ.get("API_BASE", "http://10.69.141.113:8023")
-VLM_MODEL = "gpt-4o"
+API_BASE  = os.environ.get("API_BASE", "http://zlabsml-t6.csez.zohocorpin.com:7070")
+VLM_MODEL = os.environ.get("VLM_MODEL", "gpt-4o")
 VIEWPORT  = {"width": 1280, "height": 900}
 
 # Platform viewports
