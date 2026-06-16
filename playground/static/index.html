@@ -584,6 +584,12 @@ select{
 .win-btn.close:hover{background:#C42B1C;color:#fff}
 .win-frame img{display:block;width:100%}
 
+/* ══════════════════════════════════════════
+   TAB PANES  (must hide non-active panes)
+══════════════════════════════════════════ */
+.tab-pane        { display: none }
+.tab-pane.active { display: block }
+
 /* Footer */
 .footer{
   border-top:1px solid var(--b1);padding:12px 32px;
@@ -1432,24 +1438,29 @@ async function runEval() {
   const refTab  = activeTab("ref");
   const implTab = activeTab("impl");
 
+  // Determine actual ref_type (figma tab already labeled "figma")
+  const resolvedRefType = refTab; // upload | figma | html
+
   const fd = new FormData();
-  fd.append("ref_type",  refTab);
   fd.append("impl_type", implTab);
   fd.append("platform",  currentPlatform);
 
   // Reference
   if (refTab === "upload") {
     if (!refImageFile) { showError("Please upload a reference image."); return; }
+    fd.append("ref_type", "upload");
     fd.append("ref_image", refImageFile);
   } else if (refTab === "figma") {
     const v = document.getElementById("ref-figma-url").value.trim();
     if (!v) { showError("Please enter a Figma URL."); return; }
-    fd.append("ref_url", v); fd.set("ref_type","figma");
+    fd.append("ref_type", "figma");
+    fd.append("ref_url", v);
     const tok = document.getElementById("ref-figma-token").value.trim();
     if (tok) fd.append("ref_figma_token", tok);
   } else {
     const v = document.getElementById("ref-html-input").value.trim();
     if (!v) { showError("Please paste reference HTML."); return; }
+    fd.append("ref_type", "html");
     fd.append("ref_html", v);
   }
 
@@ -1583,6 +1594,8 @@ function showResults(data) {
 
   const authNote = data.auth_type && data.auth_type !== "none"
     ? ` · rendered via ${data.auth_type} auth` : "";
+  const platLabel = { mobile:"Mobile", windows:"Windows", desktop:"Desktop" }[platType] || "Desktop";
+  document.getElementById("score-title").textContent = `${platLabel} Fidelity Score`;
   document.getElementById("score-sub").textContent = (data.vlm?.summary || "") + authNote;
 
   // Metrics
@@ -1666,11 +1679,19 @@ function showResults(data) {
    DIFF SLIDER
 ══════════════════════════════════════════ */
 let sliding = false;
+let _sliderUpHandler = null;
 function sliderStart(e) {
   sliding = true;
   moveSlider(e.clientX, e.currentTarget);
+  if (_sliderUpHandler) document.removeEventListener("mouseup", _sliderUpHandler);
   document.addEventListener("mousemove", sliderMove);
-  document.addEventListener("mouseup", () => { sliding=false; document.removeEventListener("mousemove",sliderMove); });
+  _sliderUpHandler = () => {
+    sliding = false;
+    document.removeEventListener("mousemove", sliderMove);
+    document.removeEventListener("mouseup", _sliderUpHandler);
+    _sliderUpHandler = null;
+  };
+  document.addEventListener("mouseup", _sliderUpHandler);
 }
 function sliderTouch(e) {
   const wrap = e.currentTarget;
@@ -1777,9 +1798,20 @@ loadSampleLibrary();
 ══════════════════════════════════════════ */
 function resetAll() {
   clearRef();
-  ["ref-figma-url","ref-html-input","impl-url-input","impl-html-input"].forEach(id => {
+  clearAndroid();
+  clearWindows();
+  ["ref-figma-url","ref-html-input","impl-url-input","impl-html-input",
+   "android-url-input","windows-url-input"].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = "";
   });
+  // Reset auth state
+  setAuthType("none", document.querySelector(".seg-btn[data-type='none']"));
+  document.getElementById("auth-body").style.display = "none";
+  document.querySelector(".auth-toggle")?.classList.remove("open");
+  // Reset score ring
+  const ring = document.getElementById("score-ring");
+  if (ring) { ring.style.strokeDashoffset = "339.3"; ring.style.stroke = ""; }
+  document.getElementById("score-num").textContent = "—";
   document.getElementById("progress-section").style.display = "none";
   document.getElementById("results-section").style.display  = "none";
   hideError();

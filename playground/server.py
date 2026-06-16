@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Design-to-Code Fidelity Playground — Backend (Auth-Aware v2)
+Design-to-Code Fidelity Playground — Backend (Auth-Aware v3)
 =============================================================
 New in v2:
   • Figma REST API screenshots  (PAT token  → export PNG via API)
@@ -86,10 +86,44 @@ DEMO_COOKIE_VALUE = "authenticated"
 
 _queues: dict[str, asyncio.Queue] = {}
 
-app = FastAPI(title="Design Fidelity Playground v2")
+# ── Safety limits ──────────────────────────────────────────────────────────────
+MAX_UPLOAD_BYTES  = 10 * 1024 * 1024   # 10 MB per file
+MAX_CONCURRENT    = 6                  # max simultaneous Playwright instances
+SS_MAX_AGE_HOURS  = 2                  # screenshots older than this are deleted
+_job_semaphore    = asyncio.Semaphore(MAX_CONCURRENT)
+
+# ── ADB serial validation (alphanumeric, colon, dot, hyphen only) ──────────────
+_ADB_SERIAL_RE = re.compile(r'^[A-Za-z0-9:.\-]+$')
+
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(application):
+    n = _cleanup_old_screenshots()
+    if n:
+        print(f"[startup] cleaned up {n} old screenshots")
+    yield   # server runs here
+
+app = FastAPI(title="Design Fidelity Playground v3", lifespan=lifespan)
 
 app.mount("/static",      StaticFiles(directory=str(BASE_DIR / "static")),  name="static")
 app.mount("/screenshots", StaticFiles(directory=str(SS_DIR)),               name="screenshots")
+
+
+def _cleanup_old_screenshots():
+    """Delete screenshots older than SS_MAX_AGE_HOURS to prevent disk bloat."""
+    cutoff = time.time() - SS_MAX_AGE_HOURS * 3600
+    removed = 0
+    for f in SS_DIR.glob("*.png"):
+        try:
+            if f.stat().st_mtime < cutoff:
+                f.unlink()
+                removed += 1
+        except Exception:
+            pass
+    return removed
+
+
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -345,10 +379,16 @@ async def evaluate(
     ref_image_bytes: Optional[bytes] = None
     if ref_image:
         ref_image_bytes = await ref_image.read()
+        if len(ref_image_bytes) > MAX_UPLOAD_BYTES:
+            from fastapi import HTTPException
+            raise HTTPException(413, f"Reference image exceeds {MAX_UPLOAD_BYTES//1024//1024} MB limit")
 
     android_image_bytes: Optional[bytes] = None
     if impl_android_image:
         android_image_bytes = await impl_android_image.read()
+        if len(android_image_bytes) > MAX_UPLOAD_BYTES:
+            from fastapi import HTTPException
+            raise HTTPException(413, f"Implementation image exceeds {MAX_UPLOAD_BYTES//1024//1024} MB limit")
 
     auth_cfg = {
         "type":    impl_auth_type or "none",
@@ -359,6 +399,12 @@ async def evaluate(
     }
 
     vp = VIEWPORTS.get(platform or "desktop", VIEWPORTS["desktop"])
+
+    # Validate ADB device serial before accepting the job
+    if impl_type == "adb" and impl_adb_device:
+        if not _ADB_SERIAL_RE.match(impl_adb_device):
+            from fastapi import HTTPException
+            raise HTTPException(400, "Invalid ADB device serial format")
 
     asyncio.create_task(_run_evaluation(
         job_id, q,
@@ -373,6 +419,8 @@ async def evaluate(
 # SSE STREAM
 # ══════════════════════════════════════════════════════════════════════════════
 
+SSE_TIMEOUT_SECS = 300   # 5-minute hard deadline per evaluation job
+
 @app.get("/api/stream/{job_id}")
 async def stream(job_id: str):
     q = _queues.get(job_id)
@@ -380,8 +428,19 @@ async def stream(job_id: str):
         return HTMLResponse("Job not found", status_code=404)
 
     async def event_gen():
+        deadline = time.time() + SSE_TIMEOUT_SECS
         while True:
-            msg = await q.get()
+            remaining = deadline - time.time()
+            if remaining <= 0:
+                yield f"data: {json.dumps({'type':'error','msg':'Evaluation timed out after 5 minutes'})}\n\n"
+                _queues.pop(job_id, None)
+                break
+            try:
+                msg = await asyncio.wait_for(q.get(), timeout=min(remaining, 30))
+            except asyncio.TimeoutError:
+                # Send a keep-alive comment so the browser connection stays open
+                yield ": keepalive\n\n"
+                continue
             yield f"data: {json.dumps(msg)}\n\n"
             if msg.get("type") in ("done", "error"):
                 _queues.pop(job_id, None)
@@ -406,110 +465,131 @@ async def _run_evaluation(
         if data: payload.update(data)
         await q.put(payload)
 
-    plat_type = _platform_type(platform)   # "desktop" | "mobile" | "windows"
-    is_mobile   = plat_type == "mobile"
-    is_windows  = plat_type == "windows"
+    plat_type  = _platform_type(platform)
+    is_mobile  = plat_type == "mobile"
+    is_windows = plat_type == "windows"
 
-    try:
-        loop = asyncio.get_event_loop()
-        ref_ss  = SS_DIR / f"{job_id}_ref.png"
-        impl_ss = SS_DIR / f"{job_id}_impl.png"
+    async with _job_semaphore:
+        try:
+            loop    = asyncio.get_running_loop()   # fixes deprecation warning in Python 3.10+
+            ref_ss  = SS_DIR / f"{job_id}_ref.png"
+            impl_ss = SS_DIR / f"{job_id}_impl.png"
 
-        # ── Step 1: Reference ─────────────────────────────────────────────────
-        await emit("reference", 5, "Preparing reference design …")
+            # ── Step 1: Reference ─────────────────────────────────────────────
+            await emit("reference", 5, "Preparing reference design …")
 
-        if ref_type == "upload" and ref_image_bytes:
-            img = Image.open(io.BytesIO(ref_image_bytes)).convert("RGB")
-            max_w = viewport["width"]
-            if img.width > max_w:
-                r = max_w / img.width
-                img = img.resize((max_w, int(img.height * r)), Image.LANCZOS)
-            img.save(str(ref_ss), "PNG")
+            if ref_type == "upload" and ref_image_bytes:
+                img = Image.open(io.BytesIO(ref_image_bytes)).convert("RGB")
+                max_w = viewport["width"]
+                if img.width > max_w:
+                    r = max_w / img.width
+                    img = img.resize((max_w, int(img.height * r)), Image.LANCZOS)
+                img.save(str(ref_ss), "PNG")
 
-        elif ref_type in ("figma", "url") and ref_url:
-            if ref_type == "figma" and ref_figma_token:
-                await emit("reference", 10, "Fetching Figma frame via REST API …")
-                await loop.run_in_executor(None, _screenshot_figma, ref_url, ref_figma_token, ref_ss)
-            elif ref_type == "figma" and not ref_figma_token:
-                await emit("reference", 10, "Screenshotting Figma URL (no token, may be partial) …")
-                await loop.run_in_executor(None, _screenshot_url, ref_url, ref_ss, viewport)
+            elif ref_type in ("figma", "url") and ref_url:
+                if ref_type == "figma" and ref_figma_token:
+                    await emit("reference", 10, "Fetching Figma frame via REST API …")
+                    await loop.run_in_executor(None, _screenshot_figma, ref_url, ref_figma_token, ref_ss)
+                elif ref_type == "figma" and not ref_figma_token:
+                    await emit("reference", 10, "Screenshotting Figma URL (no token, may be partial) …")
+                    await loop.run_in_executor(None, _screenshot_url, ref_url, ref_ss, viewport)
+                else:
+                    await loop.run_in_executor(None, _screenshot_url, ref_url, ref_ss, viewport)
+
+            elif ref_type == "html" and ref_html:
+                tmp = None
+                try:
+                    with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
+                        f.write(ref_html)
+                        tmp = Path(f.name)
+                    await loop.run_in_executor(None, _screenshot_file, tmp, ref_ss, viewport)
+                finally:
+                    if tmp:
+                        tmp.unlink(missing_ok=True)
             else:
-                await loop.run_in_executor(None, _screenshot_url, ref_url, ref_ss, viewport)
+                await q.put({"type": "error", "msg": "Invalid reference input"}); return
 
-        elif ref_type == "html" and ref_html:
-            with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
-                f.write(ref_html); tmp = Path(f.name)
-            await loop.run_in_executor(None, _screenshot_file, tmp, ref_ss, viewport)
-            tmp.unlink(missing_ok=True)
-        else:
-            await q.put({"type": "error", "msg": "Invalid reference input"}); return
+            await emit("reference", 20, "Reference captured ✓", {"ref_img": _img_url(ref_ss)})
 
-        await emit("reference", 20, "Reference captured ✓", {"ref_img": _img_url(ref_ss)})
+            # ── Step 2: Implementation ─────────────────────────────────────────
+            auth_label = f" [{auth_cfg['type']} auth]" if auth_cfg["type"] != "none" else ""
+            plat_label = f" [{platform}]" if platform != "desktop" else ""
+            await emit("impl", 25, f"Rendering implementation{plat_label}{auth_label} …")
 
-        # ── Step 2: Implementation ────────────────────────────────────────────
-        auth_label = f" [{auth_cfg['type']} auth]" if auth_cfg["type"] != "none" else ""
-        plat_label = f" [{platform}]" if platform != "desktop" else ""
-        await emit("impl", 25, f"Rendering implementation{plat_label}{auth_label} …")
+            if impl_type == "adb" and impl_adb_device:
+                await emit("impl", 30, f"Capturing ADB screenshot from {impl_adb_device} …")
+                await loop.run_in_executor(None, _screenshot_adb, impl_adb_device, impl_ss)
 
-        if impl_type == "adb" and impl_adb_device:
-            await emit("impl", 30, f"Capturing ADB screenshot from device {impl_adb_device} …")
-            await loop.run_in_executor(None, _screenshot_adb, impl_adb_device, impl_ss)
+            elif impl_type in ("android_upload", "windows_upload") and android_image_bytes:
+                img = Image.open(io.BytesIO(android_image_bytes)).convert("RGB")
+                img.save(str(impl_ss), "PNG")
 
-        elif impl_type in ("android_upload", "windows_upload") and android_image_bytes:
-            img = Image.open(io.BytesIO(android_image_bytes)).convert("RGB")
-            img.save(str(impl_ss), "PNG")
+            elif impl_type == "url" and impl_url:
+                ua = WINDOWS_UA if is_windows else None
+                if auth_cfg["type"] == "none":
+                    await loop.run_in_executor(None, _screenshot_url, impl_url, impl_ss, viewport, ua)
+                else:
+                    await emit("impl", 30, f"Auth agent starting ({auth_cfg['type']}) …")
+                    result = await loop.run_in_executor(
+                        None, _screenshot_with_auth, impl_url, impl_ss, auth_cfg, viewport, ua
+                    )
+                    if result.get("agent_log"):
+                        await emit("impl", 38, result["agent_log"])
 
-        elif impl_type == "url" and impl_url:
-            ua = WINDOWS_UA if is_windows else None
-            if auth_cfg["type"] == "none":
-                await loop.run_in_executor(None, _screenshot_url, impl_url, impl_ss, viewport, ua)
+            elif impl_type == "html" and impl_html:
+                tmp = None
+                try:
+                    with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
+                        f.write(impl_html)
+                        tmp = Path(f.name)
+                    await loop.run_in_executor(None, _screenshot_file, tmp, impl_ss, viewport)
+                finally:
+                    if tmp:
+                        tmp.unlink(missing_ok=True)
             else:
-                await emit("impl", 30, f"Auth agent starting ({auth_cfg['type']}) …")
-                result = await loop.run_in_executor(
-                    None, _screenshot_with_auth, impl_url, impl_ss, auth_cfg, viewport, ua
-                )
-                if result.get("agent_log"):
-                    await emit("impl", 38, result["agent_log"])
+                await q.put({"type": "error", "msg": "Invalid implementation input"}); return
 
-        elif impl_type == "html" and impl_html:
-            with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
-                f.write(impl_html); tmp = Path(f.name)
-            await loop.run_in_executor(None, _screenshot_file, tmp, impl_ss, viewport)
-            tmp.unlink(missing_ok=True)
-        else:
-            await q.put({"type": "error", "msg": "Invalid implementation input"}); return
+            await emit("impl", 45, "Implementation rendered ✓", {"impl_img": _img_url(impl_ss)})
 
-        await emit("impl", 45, "Implementation rendered ✓", {"impl_img": _img_url(impl_ss)})
+            # ── Step 3: Pixel metrics ──────────────────────────────────────────
+            await emit("metrics", 50, "Computing pixel & SSIM metrics …")
+            px = await loop.run_in_executor(None, _pixel_metrics, ref_ss, impl_ss)
+            await emit("metrics", 65, "Pixel metrics done ✓", {"pixel": px})
 
-        # ── Step 3: Pixel metrics ─────────────────────────────────────────────
-        await emit("metrics", 50, "Computing pixel & SSIM metrics …")
-        px = await loop.run_in_executor(None, _pixel_metrics, ref_ss, impl_ss)
-        await emit("metrics", 65, "Pixel metrics done ✓", {"pixel": px})
+            # ── Step 4: VLM judge ──────────────────────────────────────────────
+            rubric_map = {"mobile": MOBILE_RUBRIC_PROMPT, "windows": WINDOWS_RUBRIC_PROMPT}
+            rubric = rubric_map.get(plat_type, RUBRIC_PROMPT)
+            await emit("vlm", 70, f"Asking VLM judge ({VLM_MODEL}, {plat_type} rubric) …")
+            vlm = await loop.run_in_executor(None, _vlm_judge, ref_ss, impl_ss, rubric)
+            await emit("vlm", 88, "VLM scoring done ✓", {"vlm": vlm})
 
-        # ── Step 4: VLM judge ─────────────────────────────────────────────────
-        rubric_map = {"mobile": MOBILE_RUBRIC_PROMPT, "windows": WINDOWS_RUBRIC_PROMPT}
-        rubric = rubric_map.get(plat_type, RUBRIC_PROMPT)
-        await emit("vlm", 70, f"Asking VLM judge ({VLM_MODEL}, {plat_type} rubric) …")
-        vlm = await loop.run_in_executor(None, _vlm_judge, ref_ss, impl_ss, rubric)
-        await emit("vlm", 88, "VLM scoring done ✓", {"vlm": vlm})
+            # ── Step 5: Composite ──────────────────────────────────────────────
+            await emit("composite", 95, "Computing composite score …")
+            ssim_safe = px["ssim"] if not (px["ssim"] != px["ssim"]) else 0.0  # NaN guard
+            composite = round(
+                0.40 * vlm.get("total", 0)
+                + 0.35 * ssim_safe * 100
+                + 0.25 * px["pixel_match_20"],
+                1
+            )
+            # Clamp to [0, 100]
+            composite = max(0.0, min(100.0, composite))
+            await q.put({
+                "type": "done", "composite": composite, "grade": _grade(composite),
+                "pixel": px, "vlm": vlm,
+                "ref_img": _img_url(ref_ss), "impl_img": _img_url(impl_ss),
+                "auth_type": auth_cfg["type"],
+                "platform": platform,
+                "plat_type": plat_type,
+                "is_mobile": is_mobile,
+                "is_windows": is_windows,
+            })
+            # Clean stale screenshots opportunistically
+            _cleanup_old_screenshots()
 
-        # ── Step 5: Composite ─────────────────────────────────────────────────
-        await emit("composite", 95, "Computing composite score …")
-        composite = round(0.40 * vlm.get("total",0) + 0.35 * px["ssim"]*100 + 0.25 * px["pixel_match_20"], 1)
-        await q.put({
-            "type": "done", "composite": composite, "grade": _grade(composite),
-            "pixel": px, "vlm": vlm,
-            "ref_img": _img_url(ref_ss), "impl_img": _img_url(impl_ss),
-            "auth_type": auth_cfg["type"],
-            "platform": platform,
-            "plat_type": plat_type,
-            "is_mobile": is_mobile,
-            "is_windows": is_windows,
-        })
-
-    except Exception as exc:
-        import traceback
-        await q.put({"type": "error", "msg": str(exc), "trace": traceback.format_exc()})
+        except Exception as exc:
+            import traceback
+            await q.put({"type": "error", "msg": str(exc), "trace": traceback.format_exc()})
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -589,26 +669,26 @@ def _screenshot_figma(figma_url: str, token: str, out: Path):
     node_id   = node_id.replace("%3A", ":").replace("-", ":")  # normalise
 
     if not node_id:
-        # No node-id → export first page thumbnail via /v1/files endpoint
-        api_url = f"https://api.figma.com/v1/files/{file_key}/images"
+        # No node-id → use /v1/files/{key} thumbnails endpoint (correct Figma API)
+        api_url = f"https://api.figma.com/v1/files/{file_key}/thumbnails"
+        req = urllib.request.Request(api_url, headers={"X-Figma-Token": token})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            data = json.loads(r.read())
+        # Thumbnail endpoint returns {"thumbnails": {"PAGE_ID": "https://…"}}
+        thumbnails = data.get("thumbnails", {})
+        img_url = next(iter(thumbnails.values()), None) if thumbnails else None
     else:
         ids_param = urllib.parse.quote(node_id)
         api_url   = f"https://api.figma.com/v1/images/{file_key}?ids={ids_param}&format=png&scale=2"
-
-    req = urllib.request.Request(api_url, headers={"X-Figma-Token": token})
-    with urllib.request.urlopen(req, timeout=30) as r:
-        data = json.loads(r.read())
-
-    # Get the PNG download URL from the response
-    img_url = None
-    if "images" in data:
-        images = data["images"]
+        req = urllib.request.Request(api_url, headers={"X-Figma-Token": token})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            data = json.loads(r.read())
+        # Image export endpoint returns {"images": {"NODE_ID": "https://…"}}
+        images = data.get("images", {})
         img_url = next(iter(images.values()), None) if images else None
-    elif "meta" in data and "images" in data["meta"]:
-        img_url = next(iter(data["meta"]["images"].values()), None)
 
     if not img_url:
-        raise ValueError(f"Figma API did not return an image URL. Response: {data}")
+        raise ValueError(f"Figma API did not return an image URL. Check that the file key and node-id are correct. Response keys: {list(data.keys())}")
 
     with urllib.request.urlopen(img_url, timeout=30) as r:
         img_bytes = r.read()
@@ -893,6 +973,56 @@ def _encode(path: Path) -> str:
     return base64.b64encode(path.read_bytes()).decode()
 
 
+def _parse_vlm_json(raw: str) -> dict:
+    """
+    Robustly parse VLM JSON response.
+    Handles markdown fences (```json … ``` or ``` … ```), and falls back to
+    regex extraction if the model emits prose before/after the JSON object.
+    Also normalises the `total` field so it always equals the sum of dimensions.
+    """
+    text = raw.strip()
+
+    # Strip markdown code fence (any number of backticks, optional language tag)
+    fence_re = re.compile(r"```(?:json)?\s*([\s\S]*?)```", re.IGNORECASE)
+    m = fence_re.search(text)
+    if m:
+        text = m.group(1).strip()
+
+    # Try direct parse first
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        # Fall back: find the outermost JSON object
+        obj_m = re.search(r"\{[\s\S]*\}", text)
+        if not obj_m:
+            return {"error": raw, "total": 0, "summary": "VLM response could not be parsed"}
+        try:
+            data = json.loads(obj_m.group())
+        except json.JSONDecodeError:
+            return {"error": raw, "total": 0, "summary": "VLM response could not be parsed"}
+
+    # Normalise total: if dimensions are present, recompute to avoid VLM hallucination
+    dim_keys_desktop = ["layout_structure","typography","color_visual_style","component_fidelity","spacing_alignment"]
+    dim_keys_mobile  = ["app_bar_navigation","touch_targets","typography","layout_responsive","component_fidelity"]
+    dim_keys_windows = ["titlebar_chrome","navigation_menus","controls_components","typography_icons","layout_spacing"]
+
+    for dim_keys in (dim_keys_desktop, dim_keys_mobile, dim_keys_windows):
+        if all(k in data for k in dim_keys):
+            computed = sum(int(data.get(k, 0)) for k in dim_keys)
+            data["total"] = min(computed, 100)  # clamp to 100
+            break
+    else:
+        # Clamp whatever total is there
+        data["total"] = min(int(data.get("total", 0)), 100)
+
+    # Ensure all dimension values are ints in [0, 20]
+    for k, v in list(data.items()):
+        if k not in ("total", "summary", "error") and isinstance(v, (int, float)):
+            data[k] = max(0, min(20, int(v)))
+
+    return data
+
+
 def _vlm_judge(ref_p: Path, cmp_p: Path, rubric_prompt: str = None) -> dict:
     prompt = rubric_prompt or RUBRIC_PROMPT
     messages = [{"role": "user", "content": [
@@ -905,16 +1035,12 @@ def _vlm_judge(ref_p: Path, cmp_p: Path, rubric_prompt: str = None) -> dict:
     payload = json.dumps({"model": VLM_MODEL, "messages": messages, "max_tokens": 800}).encode()
     req = urllib.request.Request(f"{API_BASE}/v1/chat/completions", data=payload,
         headers={"Content-Type": "application/json"}, method="POST")
-    with urllib.request.urlopen(req, timeout=120) as r:
-        raw = json.loads(r.read())["choices"][0]["message"]["content"].strip()
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"): raw = raw[4:]
     try:
-        return json.loads(raw)
-    except Exception:
-        m = re.search(r"\{.*\}", raw, re.DOTALL)
-        return json.loads(m.group()) if m else {"error": raw, "total": 0}
+        with urllib.request.urlopen(req, timeout=120) as r:
+            raw = json.loads(r.read())["choices"][0]["message"]["content"].strip()
+    except Exception as e:
+        return {"error": str(e), "total": 0, "summary": f"VLM API error: {e}"}
+    return _parse_vlm_json(raw)
 
 
 def _grade(s: float) -> dict:
