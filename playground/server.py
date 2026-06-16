@@ -559,29 +559,44 @@ async def _run_evaluation(
             # ── Step 4: VLM judge ──────────────────────────────────────────────
             rubric_map = {"mobile": MOBILE_RUBRIC_PROMPT, "windows": WINDOWS_RUBRIC_PROMPT}
             rubric = rubric_map.get(plat_type, RUBRIC_PROMPT)
-            await emit("vlm", 70, f"Asking VLM judge ({VLM_MODEL}, {plat_type} rubric) …")
-            vlm = await loop.run_in_executor(None, _vlm_judge, ref_ss, impl_ss, rubric)
-            await emit("vlm", 88, "VLM scoring done ✓", {"vlm": vlm})
+            vlm_available = _check_vlm_available()
+            if vlm_available:
+                await emit("vlm", 70, f"Asking VLM judge ({VLM_MODEL}, {plat_type} rubric) …")
+                vlm = await loop.run_in_executor(None, _vlm_judge, ref_ss, impl_ss, rubric)
+                await emit("vlm", 88, "VLM scoring done ✓", {"vlm": vlm})
+            else:
+                await emit("vlm", 88,
+                    "⚠ VLM API unreachable — showing pixel-only score (deploy to remote server for full VLM scoring)")
+                vlm = {"total": 0, "summary": "VLM unavailable — pixel metrics only", "vlm_skipped": True}
 
             # ── Step 5: Composite ──────────────────────────────────────────────
             await emit("composite", 95, "Computing composite score …")
             ssim_safe = px["ssim"] if not (px["ssim"] != px["ssim"]) else 0.0  # NaN guard
-            composite = round(
-                0.40 * vlm.get("total", 0)
-                + 0.35 * ssim_safe * 100
-                + 0.25 * px["pixel_match_20"],
-                1
-            )
+            if vlm.get("vlm_skipped"):
+                # Pixel-only composite: re-weight SSIM 60% + PixelMatch 40%
+                composite = round(0.60 * ssim_safe * 100 + 0.40 * px["pixel_match_20"], 1)
+            else:
+                composite = round(
+                    0.40 * vlm.get("total", 0)
+                    + 0.35 * ssim_safe * 100
+                    + 0.25 * px["pixel_match_20"],
+                    1
+                )
             # Clamp to [0, 100]
             composite = max(0.0, min(100.0, composite))
             await q.put({
-                "type": "done", "composite": composite, "grade": _grade(composite),
-                "pixel": px, "vlm": vlm,
-                "ref_img": _img_url(ref_ss), "impl_img": _img_url(impl_ss),
-                "auth_type": auth_cfg["type"],
-                "platform": platform,
-                "plat_type": plat_type,
-                "is_mobile": is_mobile,
+                "type":       "done",
+                "composite":  composite,
+                "grade":      _grade(composite),
+                "pixel":      px,
+                "vlm":        vlm,
+                "vlm_skipped": vlm.get("vlm_skipped", False),
+                "ref_img":    _img_url(ref_ss),
+                "impl_img":   _img_url(impl_ss),
+                "auth_type":  auth_cfg["type"],
+                "platform":   platform,
+                "plat_type":  plat_type,
+                "is_mobile":  is_mobile,
                 "is_windows": is_windows,
             })
             # Clean stale screenshots opportunistically
@@ -971,6 +986,19 @@ Respond ONLY with valid JSON — no extra text:
 
 def _encode(path: Path) -> str:
     return base64.b64encode(path.read_bytes()).decode()
+
+
+def _check_vlm_available() -> bool:
+    """Quick TCP probe to see if the VLM API is reachable (< 2 s timeout)."""
+    import socket
+    try:
+        parsed = urllib.parse.urlparse(API_BASE)
+        host   = parsed.hostname or "localhost"
+        port   = parsed.port or 80
+        with socket.create_connection((host, port), timeout=2):
+            return True
+    except OSError:
+        return False
 
 
 def _parse_vlm_json(raw: str) -> dict:

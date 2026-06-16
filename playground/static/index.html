@@ -1042,6 +1042,17 @@ select{
     </div>
   </div>
 
+  <!-- VLM unavailable notice -->
+  <div id="vlm-notice" style="display:none;align-items:center;gap:10px;
+       background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.25);
+       border-radius:var(--r2);padding:12px 16px;font-size:13px;color:#FCD34D;">
+    <svg width="15" height="15" fill="none" viewBox="0 0 24 24" style="flex-shrink:0">
+      <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+            stroke="#FBBF24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span id="vlm-notice-msg">VLM API unreachable — score shown is pixel-only (60% SSIM + 40% Pixel Match). Deploy to the remote server for full VLM scoring.</span>
+  </div>
+
   <!-- Results -->
   <div id="results-section">
 
@@ -1573,6 +1584,14 @@ function showResults(data) {
   rs.style.display = "flex";
   rs.style.flexDirection = "column";
   rs.style.gap = "16px";
+
+  // VLM notice
+  const vlmNotice = document.getElementById("vlm-notice");
+  if (data.vlm_skipped) {
+    vlmNotice.style.display = "flex";
+  } else {
+    vlmNotice.style.display = "none";
+  }
 
   const g = data.grade;
   const c = data.composite;
